@@ -1,96 +1,76 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>QuantCam</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#0f172a" />
   <link rel="manifest" href="manifest.json" />
-  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <meta name="theme-color" content="#0e1116" />
   <style>
-    :root { --bg:#0b1220; --card:#111827; --txt:#e5e7eb; --muted:#94a3b8; --accent:#38bdf8; }
-    html,body{height:100%}
-    body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
-    .wrap{max-width:760px;margin:0 auto;padding:32px}
-    .card{background:var(--card);border-radius:16px;padding:24px;box-shadow:0 8px 28px rgba(0,0,0,.35)}
-    h1{margin:0 0 8px;font-size:28px}
-    .muted{color:var(--muted)}
-    button{appearance:none;border:0;border-radius:12px;padding:12px 16px;background:var(--accent);color:#001018;
-      font-weight:700;cursor:pointer}
-    button:disabled{opacity:.5;cursor:not-allowed}
-    .row{display:flex;gap:12px;flex-wrap:wrap;margin-top:16px}
-    input[type="url"]{flex:1;min-width:260px;padding:12px;border-radius:12px;border:1px solid #1f2937;background:#0b1020;color:var(--txt)}
-    .tip{margin-top:16px;font-size:13px}
-    .ok{color:#22c55e}
-    .err{color:#f87171}
-    .small{font-size:12px}
+    html,body{margin:0;height:100%;background:#0e1116;color:#e6edf3;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
+    .wrap{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center}
+    h1{font-size:22px;margin:0}
+    button{font-size:18px;padding:14px 18px;border-radius:14px;border:0;cursor:pointer;background:#2d6cdf;color:#fff}
+    button:disabled{opacity:.6;cursor:not-allowed}
+    .note{opacity:.8;font-size:14px}
+    #status{white-space:pre-wrap;font-family:ui-monospace,Consolas,monospace;font-size:13px;background:#12161c;border:1px solid #1f232a;border-radius:12px;padding:12px;max-width:680px}
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="card">
-      <h1>QuantCam</h1>
-      <div class="muted">Point • Shoot • Quant — private test launcher</div>
-      <div class="row" style="margin-top:20px">
-        <input id="execUrl" type="url" placeholder="Paste your Apps Script /exec URL (optional)" />
-        <button id="btnPing">Run Ping Test</button>
-      </div>
-      <div id="status" class="tip muted">Ready.</div>
-      <div class="row" style="margin-top:20px">
-        <button id="btnInstall" hidden>Add to Home Screen</button>
-        <button id="btnOpen" hidden>Open QuantCam (installed)</button>
-      </div>
-      <div class="tip small">
-        If you see Google Drive/Docs errors on Android, the Drive app is hijacking the link.
-        Long-press the link and choose <b>Open in browser</b> or disable “Open supported links”
-        for Drive/Docs in Android settings.
-      </div>
-    </div>
-  </div>
-  <script>
-    let deferredPrompt = null;
-    const btnInstall = document.getElementById('btnInstall');
-    const btnOpen = document.getElementById('btnOpen');
-    const statusEl = document.getElementById('status');
+<div class="wrap">
+  <img src="icons/icon-192.png" alt="" width="72" height="72" style="border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,.35)">
+  <h1>QuantCam — Point • Shoot • Quant</h1>
+  <button id="btn">📷 Open Camera & Quantify</button>
+  <div class="note">Takes a photo, uploads to QuantCam backend, logs + routes in Drive, returns a summary.</div>
+  <div id="status">Idle.</div>
+</div>
 
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      btnInstall.hidden = false;
-    });
+<script>
+const BACKEND = "<YOUR_BACKEND_URL>"; // <-- paste your Apps Script /exec URL here
 
-    btnInstall.addEventListener('click', async () => {
-      if (!deferredPrompt) return;
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      deferredPrompt = null;
-      btnInstall.hidden = true;
-      statusEl.innerHTML = outcome === 'accepted' ? '<span class="ok">Installed.</span>' : 'Install dismissed.';
-    });
+const btn = document.getElementById('btn');
+const statusEl = document.getElementById('status');
 
-    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
-      btnOpen.hidden = false;
-      btnOpen.addEventListener('click', () => window.location.href = './');
-    }
+function log(msg){ statusEl.textContent = String(msg); }
 
-    document.getElementById('btnPing').addEventListener('click', async () => {
-      const url = (document.getElementById('execUrl').value || '').trim();
-      const testUrl = url ? url : (new URL('./?action=ping', window.location.href)).toString();
-      statusEl.textContent = 'Pinging…';
-      try {
-        const res = await fetch(testUrl, { mode: 'cors', cache: 'no-store' });
-        const txt = await res.text();
-        statusEl.innerHTML = `<span class="ok">OK</span> • ${res.status} • ${txt.substring(0, 140)}`;
-      } catch (err) {
-        statusEl.innerHTML = `<span class="err">Failed:</span> ${String(err).slice(0,200)}`;
-      }
-    });
+async function upload(file){
+  log("Uploading…");
+  const fd = new FormData();
+  fd.append("file", file);
+  // Optional: include hints/metadata if your script expects them
+  // fd.append("source", "QuantCamPWA");
 
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./service-worker.js').catch(()=>{});
-      });
-    }
-  </script>
+  const res = await fetch(BACKEND, { method: "POST", body: fd });
+  if (!res.ok){ throw new Error("Backend HTTP " + res.status); }
+
+  // Backend should return JSON; fall back to text if not
+  const ct = res.headers.get("content-type")||"";
+  const out = ct.includes("application/json") ? await res.json() : await res.text();
+  log("Done.\n" + (typeof out === "string" ? out : JSON.stringify(out, null, 2)));
+}
+
+function openCamera(){
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.capture = "environment"; // mobile: back camera
+  input.onchange = () => {
+    const file = input.files && input.files[0];
+    if (!file){ return; }
+    btn.disabled = true;
+    upload(file).catch(e => log("Error: " + e.message)).finally(()=> btn.disabled = false);
+  };
+  input.click();
+}
+
+btn.addEventListener("click", openCamera);
+
+// Register the service worker if present
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
+  });
+}
+</script>
 </body>
 </html>
