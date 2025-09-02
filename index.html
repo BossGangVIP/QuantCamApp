@@ -1,76 +1,73 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>QuantCam</title>
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#0e1116" />
-  <style>
-    html,body{margin:0;height:100%;background:#0e1116;color:#e6edf3;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
-    .wrap{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center}
-    h1{font-size:22px;margin:0}
-    button{font-size:18px;padding:14px 18px;border-radius:14px;border:0;cursor:pointer;background:#2d6cdf;color:#fff}
-    button:disabled{opacity:.6;cursor:not-allowed}
-    .note{opacity:.8;font-size:14px}
-    #status{white-space:pre-wrap;font-family:ui-monospace,Consolas,monospace;font-size:13px;background:#12161c;border:1px solid #1f232a;border-radius:12px;padding:12px;max-width:680px}
-  </style>
-</head>
-<body>
-<div class="wrap">
-  <img src="icons/icon-192.png" alt="" width="72" height="72" style="border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,.35)">
-  <h1>QuantCam — Point • Shoot • Quant</h1>
-  <button id="btn">📷 Open Camera & Quantify</button>
-  <div class="note">Takes a photo, uploads to QuantCam backend, logs + routes in Drive, returns a summary.</div>
-  <div id="status">Idle.</div>
-</div>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>QuantCam</title>
+<style>
+  body{margin:0;background:#0f172a;color:#e2e8f0;font-family:system-ui,Segoe UI,Roboto,Arial}
+  header{padding:14px 16px;font-weight:700}
+  main{display:grid;gap:12px;padding:16px}
+  video,canvas{width:100%;max-width:520px;border-radius:12px;background:#111827}
+  button{padding:12px 16px;border:0;border-radius:10px;font-weight:700}
+  .primary{background:#22c55e;color:#04110a}
+  .muted{background:#334155;color:#e2e8f0}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .note{opacity:.75;font-size:.9rem}
+</style>
+<header>📷 QuantCam</header>
+<main>
+  <div class="note">Tap <b>Open Camera</b> then <b>Capture & Upload</b>. If the preview is black, give the site camera permission.</div>
+  <div class="row">
+    <button id="open" class="primary">Open Camera</button>
+    <button id="snap" class="muted" disabled>Capture & Upload</button>
+  </div>
+  <video id="v" playsinline autoplay muted></video>
+  <canvas id="c" hidden></canvas>
+  <div id="status" class="note"></div>
+</main>
 
 <script>
-const BACKEND = "<YOUR_BACKEND_URL>"; // <-- paste your Apps Script /exec URL here
+  // ⬇️ paste your Apps Script /exec URL between the quotes:
+  const UPLOADER_URL = "";   // e.g. "https://script.google.com/macros/s/.../exec"
 
-const btn = document.getElementById('btn');
-const statusEl = document.getElementById('status');
+  const v = document.getElementById('v');
+  const c = document.getElementById('c');
+  const openBtn = document.getElementById('open');
+  const snapBtn = document.getElementById('snap');
+  const statusEl = document.getElementById('status');
+  let stream;
 
-function log(msg){ statusEl.textContent = String(msg); }
+  function say(t){ statusEl.textContent = t; }
 
-async function upload(file){
-  log("Uploading…");
-  const fd = new FormData();
-  fd.append("file", file);
-  // Optional: include hints/metadata if your script expects them
-  // fd.append("source", "QuantCamPWA");
-
-  const res = await fetch(BACKEND, { method: "POST", body: fd });
-  if (!res.ok){ throw new Error("Backend HTTP " + res.status); }
-
-  // Backend should return JSON; fall back to text if not
-  const ct = res.headers.get("content-type")||"";
-  const out = ct.includes("application/json") ? await res.json() : await res.text();
-  log("Done.\n" + (typeof out === "string" ? out : JSON.stringify(out, null, 2)));
-}
-
-function openCamera(){
-  const input = document.createElement("input");
-  input.type = "file";
-  input.accept = "image/*";
-  input.capture = "environment"; // mobile: back camera
-  input.onchange = () => {
-    const file = input.files && input.files[0];
-    if (!file){ return; }
-    btn.disabled = true;
-    upload(file).catch(e => log("Error: " + e.message)).finally(()=> btn.disabled = false);
+  openBtn.onclick = async () => {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      v.srcObject = stream;
+      snapBtn.disabled = false;
+      say('Camera ready.');
+    } catch (e) {
+      say('Camera blocked. Allow permissions, then reload.');
+    }
   };
-  input.click();
-}
 
-btn.addEventListener("click", openCamera);
+  snapBtn.onclick = async () => {
+    try {
+      const vw = v.videoWidth || 1080, vh = v.videoHeight || 1920;
+      c.width = vw; c.height = vh;
+      c.getContext('2d').drawImage(v, 0, 0, vw, vh);
+      const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.9));
+      say('Uploading…');
+      if (!UPLOADER_URL) { say('Missing uploader URL. Edit index.html and set UPLOADER_URL.'); return; }
 
-// Register the service worker if present
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
-  });
-}
+      const form = new FormData();
+      form.append('file', blob, `quantcam_${Date.now()}.jpg`);
+      form.append('source','quantcam');
+      const res = await fetch(UPLOADER_URL, { method:'POST', body: form });
+      const txt = await res.text();
+      say(res.ok ? 'Uploaded ✓' : `Upload error: ${txt}`);
+    } catch (e) {
+      say('Error: ' + (e && e.message ? e.message : e));
+    }
+  };
 </script>
-</body>
 </html>
