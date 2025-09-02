@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>QuantCam</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <style>
+    :root { --bg:#0b1220; --card:#111827; --txt:#e5e7eb; --muted:#94a3b8; --accent:#38bdf8; }
+    html,body{height:100%}
+    body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
+    .wrap{max-width:760px;margin:0 auto;padding:32px}
+    .card{background:var(--card);border-radius:16px;padding:24px;box-shadow:0 8px 28px rgba(0,0,0,.35)}
+    h1{margin:0 0 8px;font-size:28px}
+    .muted{color:var(--muted)}
+    button{appearance:none;border:0;border-radius:12px;padding:12px 16px;background:var(--accent);color:#001018;
+      font-weight:700;cursor:pointer}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    .row{display:flex;gap:12px;flex-wrap:wrap;margin-top:16px}
+    input[type="url"]{flex:1;min-width:260px;padding:12px;border-radius:12px;border:1px solid #1f2937;background:#0b1020;color:var(--txt)}
+    .tip{margin-top:16px;font-size:13px}
+    .ok{color:#22c55e}
+    .err{color:#f87171}
+    .small{font-size:12px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>QuantCam</h1>
+      <div class="muted">Point • Shoot • Quant — private test launcher</div>
+      <div class="row" style="margin-top:20px">
+        <input id="execUrl" type="url" placeholder="Paste your Apps Script /exec URL (optional)" />
+        <button id="btnPing">Run Ping Test</button>
+      </div>
+      <div id="status" class="tip muted">Ready.</div>
+      <div class="row" style="margin-top:20px">
+        <button id="btnInstall" hidden>Add to Home Screen</button>
+        <button id="btnOpen" hidden>Open QuantCam (installed)</button>
+      </div>
+      <div class="tip small">
+        If you see Google Drive/Docs errors on Android, the Drive app is hijacking the link.
+        Long-press the link and choose <b>Open in browser</b> or disable “Open supported links”
+        for Drive/Docs in Android settings.
+      </div>
+    </div>
+  </div>
+  <script>
+    let deferredPrompt = null;
+    const btnInstall = document.getElementById('btnInstall');
+    const btnOpen = document.getElementById('btnOpen');
+    const statusEl = document.getElementById('status');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      btnInstall.hidden = false;
+    });
+
+    btnInstall.addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      btnInstall.hidden = true;
+      statusEl.innerHTML = outcome === 'accepted' ? '<span class="ok">Installed.</span>' : 'Install dismissed.';
+    });
+
+    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+      btnOpen.hidden = false;
+      btnOpen.addEventListener('click', () => window.location.href = './');
+    }
+
+    document.getElementById('btnPing').addEventListener('click', async () => {
+      const url = (document.getElementById('execUrl').value || '').trim();
+      const testUrl = url ? url : (new URL('./?action=ping', window.location.href)).toString();
+      statusEl.textContent = 'Pinging…';
+      try {
+        const res = await fetch(testUrl, { mode: 'cors', cache: 'no-store' });
+        const txt = await res.text();
+        statusEl.innerHTML = `<span class="ok">OK</span> • ${res.status} • ${txt.substring(0, 140)}`;
+      } catch (err) {
+        statusEl.innerHTML = `<span class="err">Failed:</span> ${String(err).slice(0,200)}`;
+      }
+    });
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js').catch(()=>{});
+      });
+    }
+  </script>
+</body>
+</html>
