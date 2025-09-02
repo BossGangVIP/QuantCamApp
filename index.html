@@ -1,73 +1,96 @@
 <!doctype html>
 <html lang="en">
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>QuantCam</title>
-<style>
-  body{margin:0;background:#0f172a;color:#e2e8f0;font-family:system-ui,Segoe UI,Roboto,Arial}
-  header{padding:14px 16px;font-weight:700}
-  main{display:grid;gap:12px;padding:16px}
-  video,canvas{width:100%;max-width:520px;border-radius:12px;background:#111827}
-  button{padding:12px 16px;border:0;border-radius:10px;font-weight:700}
-  .primary{background:#22c55e;color:#04110a}
-  .muted{background:#334155;color:#e2e8f0}
-  .row{display:flex;gap:10px;flex-wrap:wrap}
-  .note{opacity:.75;font-size:.9rem}
-</style>
-<header>📷 QuantCam</header>
-<main>
-  <div class="note">Tap <b>Open Camera</b> then <b>Capture & Upload</b>. If the preview is black, give the site camera permission.</div>
-  <div class="row">
-    <button id="open" class="primary">Open Camera</button>
-    <button id="snap" class="muted" disabled>Capture & Upload</button>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>QuantCam</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#0f172a" />
+  <style>
+    html,body{margin:0;height:100%;background:#0b1220;color:#e5e7eb;font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    #wrap{display:flex;flex-direction:column;height:100%}
+    header{padding:16px 16px 8px;font-weight:700;font-size:22px}
+    #status{padding:0 16px 10px;font-size:14px;opacity:.8}
+    #view{position:relative;flex:1;display:flex;align-items:center;justify-content:center}
+    video,canvas{max-width:100%;max-height:100%;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    #shutter{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);width:72px;height:72px;border-radius:50%;
+      border:6px solid #94a3b8;background:#e2e8f0;}
+    #hint{position:fixed;bottom:104px;left:0;right:0;text-align:center;font-size:13px;opacity:.8}
+  </style>
+</head>
+<body>
+<div id="wrap">
+  <header>QuantCam</header>
+  <div id="status">Opening camera…</div>
+  <div id="view">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="snap" style="display:none"></canvas>
   </div>
-  <video id="v" playsinline autoplay muted></video>
-  <canvas id="c" hidden></canvas>
-  <div id="status" class="note"></div>
-</main>
+  <div id="hint">Tap the button to capture • Long-press for autofocus</div>
+  <button id="shutter" aria-label="Capture"></button>
+</div>
 
 <script>
-  // ⬇️ paste your Apps Script /exec URL between the quotes:
-  const UPLOADER_URL = "";   // e.g. "https://script.google.com/macros/s/.../exec"
+/* ===== CONFIG =====
+   Put your Apps Script /exec URL below OR pass ?api=... in the URL once,
+   or paste once via prompt — it’ll be saved in localStorage.
+*/
+const saved = localStorage.getItem('qc_api') || new URL(location).searchParams.get('api') || '';
+const API = saved || prompt('Paste your Google Apps Script /exec URL'); 
+if (API) localStorage.setItem('qc_api', API);
 
-  const v = document.getElementById('v');
-  const c = document.getElementById('c');
-  const openBtn = document.getElementById('open');
-  const snapBtn = document.getElementById('snap');
-  const statusEl = document.getElementById('status');
-  let stream;
+const statusEl = document.getElementById('status');
+const video = document.getElementById('video');
+const canvas = document.getElementById('snap');
+const shutter = document.getElementById('shutter');
 
-  function say(t){ statusEl.textContent = t; }
+async function startCamera(){
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment' }, audio: false
+    });
+    video.srcObject = stream;
+    statusEl.textContent = 'Ready.';
+  }catch(e){
+    statusEl.textContent = 'Camera blocked. Enable permission and reopen the app.';
+    console.error(e);
+  }
+}
 
-  openBtn.onclick = async () => {
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      v.srcObject = stream;
-      snapBtn.disabled = false;
-      say('Camera ready.');
-    } catch (e) {
-      say('Camera blocked. Allow permissions, then reload.');
-    }
-  };
+function blobFromFrame(){
+  const w = video.videoWidth, h = video.videoHeight;
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(video, 0, 0, w, h);
+  return new Promise(resolve => canvas.toBlob(b => resolve(b), 'image/jpeg', 0.92));
+}
 
-  snapBtn.onclick = async () => {
-    try {
-      const vw = v.videoWidth || 1080, vh = v.videoHeight || 1920;
-      c.width = vw; c.height = vh;
-      c.getContext('2d').drawImage(v, 0, 0, vw, vh);
-      const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.9));
-      say('Uploading…');
-      if (!UPLOADER_URL) { say('Missing uploader URL. Edit index.html and set UPLOADER_URL.'); return; }
+async function sendToAPI(fileBlob){
+  statusEl.textContent = 'Quantifying…';
+  try{
+    const form = new FormData();
+    form.append('file', fileBlob, `quant_${Date.now()}.jpg`);
+    // you can add more fields for labels/meta if needed:
+    form.append('source', 'QuantCamPWA');
+    const res = await fetch(API, { method:'POST', body: form });
+    const text = await res.text();
+    statusEl.textContent = res.ok ? 'Done.' : ('Error: ' + text.slice(0,140));
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = 'Network error. Check internet/API URL.';
+  }
+}
 
-      const form = new FormData();
-      form.append('file', blob, `quantcam_${Date.now()}.jpg`);
-      form.append('source','quantcam');
-      const res = await fetch(UPLOADER_URL, { method:'POST', body: form });
-      const txt = await res.text();
-      say(res.ok ? 'Uploaded ✓' : `Upload error: ${txt}`);
-    } catch (e) {
-      say('Error: ' + (e && e.message ? e.message : e));
-    }
-  };
+shutter.addEventListener('click', async ()=>{
+  if(!API){ statusEl.textContent = 'Missing API URL — reload to set it.'; return; }
+  const b = await blobFromFrame();
+  await sendToAPI(b);
+});
+
+window.addEventListener('load', startCamera);
+
+// PWA install basics
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('./service-worker.js').catch(()=>{}); }
 </script>
+</body>
 </html>
