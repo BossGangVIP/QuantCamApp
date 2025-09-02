@@ -1,104 +1,56 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>QuantCam</title>
-  <link rel="manifest" href="manifest.json" />
   <style>
-    :root{color-scheme:dark}
-    body{margin:0;background:#0b1220;color:#e6f0ff;font-family:system-ui,Arial,sans-serif;text-align:center}
-    h1{margin:16px 0 4px}
-    p.sub{margin:0 0 12px;opacity:.85}
-    input,button{width:90%;max-width:720px}
-    input{padding:12px 14px;border-radius:10px;border:1px solid #1f2a44;background:#0b1220;color:#e6f0ff}
-    button{margin:10px 0;padding:12px 18px;border-radius:10px;border:0;background:#38bdf8;color:#071423;font-weight:700}
-    video{width:90%;max-width:720px;margin-top:10px;border-radius:12px;background:#000}
-    #status{margin:10px 0;font-size:14px;opacity:.9}
-    pre{width:90%;max-width:720px;margin:12px auto;text-align:left;background:#0b1220;border:1px solid #1f2a44;border-radius:10px;padding:12px;max-height:260px;overflow:auto}
+    body {
+      font-family: Arial, sans-serif;
+      background: #0a0a0a;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    h1 {
+      margin-bottom: 1rem;
+    }
+    button {
+      background: #2196f3;
+      color: white;
+      border: none;
+      padding: 1rem 2rem;
+      font-size: 1.2rem;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    video {
+      margin-top: 1.5rem;
+      max-width: 100%;
+      border: 2px solid #444;
+      border-radius: 6px;
+    }
   </style>
 </head>
 <body>
   <h1>QuantCam</h1>
-  <p class="sub">Point • Shoot • Parse (no image storage)</p>
+  <button id="openCamera">Open Camera</button>
+  <video id="cameraFeed" autoplay playsinline></video>
 
-  <input id="execUrl" placeholder="Paste your Google Apps Script /exec URL" />
-  <button id="enableCam">Enable Camera</button>
-  <button id="capture" disabled>Capture → Parse</button>
-
-  <div id="status">Waiting…</div>
-  <video id="video" autoplay playsinline></video>
-  <canvas id="canvas" style="display:none"></canvas>
-
-  <h3 style="margin-top:14px;margin-bottom:6px">Parsed Output</h3>
-  <pre id="out">(nothing yet)</pre>
-
-<script>
-const LS_KEY = "quantcam_exec_url";
-const execInput = document.getElementById("execUrl");
-const enableBtn = document.getElementById("enableCam");
-const captureBtn = document.getElementById("capture");
-const statusEl = document.getElementById("status");
-const video = document.getElementById("video");
-const canvas = document.getElementById("canvas");
-const out = document.getElementById("out");
-
-// restore saved endpoint
-execInput.value = localStorage.getItem(LS_KEY) || "";
-execInput.addEventListener("change", () => {
-  localStorage.setItem(LS_KEY, execInput.value.trim());
-});
-
-let stream;
-async function enableCamera(){
-  try{
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: "environment" } }, audio: false
+  <script>
+    document.getElementById("openCamera").addEventListener("click", async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const videoEl = document.getElementById("cameraFeed");
+        videoEl.srcObject = stream;
+      } catch (err) {
+        alert("Camera access failed: " + err.message);
+      }
     });
-    video.srcObject = stream;
-    statusEl.textContent = "Camera ready.";
-    captureBtn.disabled = false;
-  }catch(e){
-    statusEl.textContent = "Camera error: " + e.name;
-  }
-}
-
-async function captureAndParse(){
-  const url = (execInput.value || "").trim();
-  if(!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(url)){
-    statusEl.textContent = "Enter a valid /exec URL first.";
-    execInput.focus();
-    return;
-  }
-
-  // capture current frame
-  canvas.width = video.videoWidth || 1280;
-  canvas.height = video.videoHeight || 720;
-  canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
-  const dataUrl = canvas.toDataURL("image/png"); // base64 PNG
-
-  statusEl.textContent = "Parsing…";
-  out.textContent = "(pending…)";
-
-  try{
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({ mode:"parse-only", image:dataUrl })
-    });
-    const text = await res.text();
-    try{ out.textContent = JSON.stringify(JSON.parse(text), null, 2); }
-    catch{ out.textContent = text; }
-    statusEl.textContent = res.ok ? "Parsed." : `Server error (${res.status})`;
-  }catch(err){
-    statusEl.textContent = "Network error.";
-    out.textContent = String(err);
-  }
-}
-
-enableBtn.addEventListener("click", enableCamera);
-captureBtn.addEventListener("click", captureAndParse);
-</script>
+  </script>
 </body>
 </html>
-
