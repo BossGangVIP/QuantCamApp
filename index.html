@@ -1,55 +1,159 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>QuantCam</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #0a0a0a;
-      color: #fff;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      margin: 0;
-    }
-    h1 {
-      margin-bottom: 1rem;
-    }
-    button {
-      background: #2196f3;
-      color: white;
-      border: none;
-      padding: 1rem 2rem;
-      font-size: 1.2rem;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    video {
-      margin-top: 1.5rem;
-      max-width: 100%;
-      border: 2px solid #444;
-      border-radius: 6px;
-    }
+    :root { --bg:#0e1320; --fg:#e8eefc; --muted:#a7b1c7; --accent:#2ea8ff; --card:#151b2c; }
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,Segoe UI,Roboto,Arial}
+    .wrap{max-width:880px;margin:32px auto;padding:20px}
+    .card{background:var(--card);border-radius:14px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    h1{margin:0 0 6px;font-size:32px} .sub{color:var(--muted);margin:0 0 18px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+    button{background:var(--accent);color:#001428;border:0;border-radius:10px;padding:12px 16px;font-weight:700;cursor:pointer}
+    button:disabled{opacity:.6;cursor:not-allowed}
+    input[type=text]{flex:1;min-width:260px;background:#0b1020;color:var(--fg);border:1px solid #23304f;border-radius:10px;padding:12px 14px}
+    #status{margin-top:10px;color:var(--muted);white-space:pre-wrap}
+    video,canvas{width:100%;max-height:60vh;border:1px solid #23304f;border-radius:12px;background:#000}
+    .hint{font-size:12px;color:var(--muted);margin-top:12px}
   </style>
 </head>
 <body>
-  <h1>QuantCam</h1>
-  <button id="openCamera">Open Camera</button>
-  <video id="cameraFeed" autoplay playsinline></video>
+  <div class="wrap">
+    <div class="card">
+      <h1>QuantCam</h1>
+      <p class="sub">Point • Shoot • Quant — private test launcher</p>
+
+      <!-- Optional override; kept hidden because we hard-wire below -->
+      <input id="execUrl" type="text" placeholder="Paste your Apps Script /exec URL (optional)" style="display:none">
+
+      <div class="row">
+        <button id="pingBtn">Run Ping Test</button>
+        <button id="openBtn">Open Camera</button>
+        <button id="snapBtn" disabled>Capture & Send</button>
+      </div>
+
+      <video id="cam" autoplay playsinline muted></video>
+      <canvas id="frame" hidden></canvas>
+
+      <div id="status">Ready.</div>
+      <div class="hint">
+        If ping fails: re-deploy your Apps Script web app with <b>Who has access: Anyone</b> and use the <b>/exec</b> URL.
+      </div>
+    </div>
+  </div>
 
   <script>
-    document.getElementById("openCamera").addEventListener("click", async () => {
+    // ===== 1) BACKEND URL (edit this) =======================================
+    const DEFAULT_EXEC =
+      "https://script.google.com/macros/s/AKfycbzimb_rQvHZnO-KWwxG2xGvXhDylH1nHqCII5F9zmGr16SOwQ4EpM125RO7Ov1E_mIOqA/exec";
+    // ========================================================================
+
+    // Wire default (and keep an invisible override input if you ever need it)
+    const execInput = document.getElementById("execUrl");
+    execInput.value = DEFAULT_EXEC;
+
+    const $ = (id) => document.getElementById(id);
+    const statusEl = $("status");
+    const cam = $("cam");
+    const canvas = $("frame");
+    const pingBtn = $("pingBtn");
+    const openBtn = $("openBtn");
+    const snapBtn = $("snapBtn");
+
+    function log(msg){ statusEl.textContent = String(msg); }
+
+    function getExec(){
+      const v = (execInput.value || "").trim();
+      return v || DEFAULT_EXEC;
+    }
+
+    // ---- Ping the backend ---------------------------------------------------
+    pingBtn.addEventListener("click", async () => {
+      pingBtn.disabled = true; log("Pinging…");
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        const videoEl = document.getElementById("cameraFeed");
-        videoEl.srcObject = stream;
-      } catch (err) {
-        alert("Camera access failed: " + err.message);
+        const url = getExec() + (getExec().includes("?") ? "&" : "?") + "ping=1";
+        const r = await fetch(url, { method:"GET", mode:"cors", credentials:"omit" });
+        if(!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+        const txt = await r.text();
+        log("OK • " + txt.slice(0,160));
+      } catch (e) {
+        log("Failed: " + e.message + "\n(Check deploy access: Anyone, and that this is the /exec URL.)");
+      } finally {
+        pingBtn.disabled = false;
       }
+    });
+
+    // ---- Open camera --------------------------------------------------------
+    let mediaStream = null;
+    openBtn.addEventListener("click", async () => {
+      try {
+        openBtn.disabled = true; log("Requesting camera…");
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" }, audio: false
+        });
+        cam.srcObject = mediaStream;
+        await cam.play();
+        snapBtn.disabled = false;
+        log("Camera ready. Tap ‘Capture & Send’ to quant.");
+      } catch (e) {
+        log("Camera access failed: " + e.message);
+        openBtn.disabled = false;
+      }
+    });
+
+    // ---- Capture a frame and POST to backend -------------------------------
+    snapBtn.addEventListener("click", async () => {
+      if(!cam.videoWidth){ log("Camera not ready."); return; }
+      snapBtn.disabled = true; log("Capturing…");
+
+      // Draw current frame to canvas
+      canvas.width = cam.videoWidth;
+      canvas.height = cam.videoHeight;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(cam, 0, 0, canvas.width, canvas.height);
+
+      // Convert to JPEG blob
+      canvas.toBlob(async (blob) => {
+        if(!blob){ log("Capture failed."); snapBtn.disabled = false; return; }
+
+        try{
+          log("Uploading…");
+          const form = new FormData();
+          form.append("file", blob, `quantcam_${Date.now()}.jpg`);
+          form.append("meta", JSON.stringify({
+            source: "QuantCam",
+            ts: new Date().toISOString(),
+            width: canvas.width,
+            height: canvas.height,
+            action: "quant"    // backend can route on this
+          }));
+
+          const r = await fetch(getExec() + (getExec().includes("?") ? "&" : "?") + "upload=1", {
+            method: "POST",
+            mode: "cors",
+            body: form,
+            credentials: "omit"
+          });
+
+          if(!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+          // Try JSON first, then text
+          let bodyText = "";
+          try { bodyText = JSON.stringify(await r.json()); }
+          catch { bodyText = await r.text(); }
+          log("Done • " + bodyText.slice(0, 400));
+        } catch (e){
+          log("Upload failed: " + e.message);
+        } finally {
+          snapBtn.disabled = false;
+        }
+      }, "image/jpeg", 0.9);
+    });
+
+    // ---- Cleanup stream on page hide ---------------------------------------
+    window.addEventListener("pagehide", () => {
+      try { mediaStream?.getTracks().forEach(t => t.stop()); } catch{}
     });
   </script>
 </body>
