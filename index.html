@@ -1,32 +1,30 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Open Camera</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple Camera Test</title>
   <style>
-    html,body{margin:0;padding:0;background:#fff;color:#000;font:16px system-ui,Arial}
-    .wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
-    button{font-size:18px;padding:12px 18px}
-    video{width:100%;max-width:420px;border:1px solid #aaa;border-radius:8px}
+    body { font-family: sans-serif; text-align: center; padding: 2em; }
+    video { width: 90%; max-width: 400px; margin-top: 1em; border: 1px solid #ccc; }
+    button { padding: 0.5em 1em; margin-top: 1em; }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>Open Camera</h1>
-    <button id="btn">Open Camera</button>
-    <video id="v" autoplay playsinline></video>
-    <div id="msg"></div>
-  </div>
+  <h1>Camera Test</h1>
+  <button id="openCam">Open Camera</button>
+  <p id="status">Ready.</p>
+  <video id="video" autoplay playsinline></video>
+
   <script>
-    document.getElementById('btn').addEventListener('click', async () => {
-      const msg = document.getElementById('msg');
+    document.getElementById('openCam').addEventListener('click', async () => {
+      const status = document.getElementById('status');
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        document.getElementById('v').srcObject = stream;
-        msg.textContent = '✅ Camera started';
-      } catch (e) {
-        msg.textContent = '❌ Camera error: ' + e.message;
+        document.getElementById('video').srcObject = stream;
+        status.textContent = "Camera opened successfully.";
+      } catch (err) {
+        status.textContent = "Error: " + err.name;
       }
     });
   </script>
