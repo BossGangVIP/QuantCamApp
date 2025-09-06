@@ -1,32 +1,115 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Simple Camera Test</title>
-  <style>
-    body { font-family: sans-serif; text-align: center; padding: 2em; }
-    video { width: 90%; max-width: 400px; margin-top: 1em; border: 1px solid #ccc; }
-    button { padding: 0.5em 1em; margin-top: 1em; }
-  </style>
-</head>
-<body>
-  <h1>Camera Test</h1>
-  <button id="openCam">Open Camera</button>
-  <p id="status">Ready.</p>
-  <video id="video" autoplay playsinline></video>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>QuantCam – Simple Camera</title>
+<style>
+  :root { color-scheme: dark; }
+  body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0f1320;
+       font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;color:#e8eefc}
+  .card{width:min(680px,92vw);padding:20px;border:1px solid #2a3357;border-radius:14px;background:#12172a}
+  h1{margin:0 0 8px;font-size:22px}
+  p{margin:0 0 14px;color:#9fb1d6}
+  .row{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 14px}
+  button{appearance:none;padding:12px 16px;border-radius:10px;border:0;background:#2d7dff;
+         color:white;font-weight:600;cursor:pointer}
+  button.secondary{background:#273154}
+  video{width:100%;max-height:70vh;background:#000;border-radius:10px}
+  pre{white-space:pre-wrap;background:#0b0f1f;border:1px solid #202a4a;border-radius:10px;
+      padding:10px;margin:10px 0 0;color:#9fb1d6}
+</style>
 
-  <script>
-    document.getElementById('openCam').addEventListener('click', async () => {
-      const status = document.getElementById('status');
+<body>
+  <div class="card">
+    <h1>QuantCam</h1>
+    <p>Tap <b>Open Camera</b>. If Android ever blocked it before, Chrome will show a small
+       camera icon in the address bar—tap it and allow.</p>
+
+    <div class="row">
+      <button id="openBtn">Open Camera</button>
+      <button id="flipBtn" class="secondary">Flip (front/back)</button>
+      <button id="stopBtn" class="secondary">Stop</button>
+    </div>
+
+    <video id="view" playsinline autoplay muted></video>
+    <pre id="log">Ready.</pre>
+  </div>
+
+<script>
+(() => {
+  const v = document.getElementById('view');
+  const log = msg => document.getElementById('log').textContent = String(msg);
+  let stream = null;
+  let useFront = false;
+
+  function supported() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      log('This browser cannot open the camera (getUserMedia missing). Use Chrome.');
+      return false;
+    }
+    if (!isSecureContext) {
+      log('Camera requires HTTPS context. GitHub Pages is OK; file:// or http:// will not work.');
+      return false;
+    }
+    return true;
+  }
+
+  async function openCamera() {
+    if (!supported()) return;
+    try {
+      // Stop any existing stream first
+      if (stream) stopCamera();
+
+      const constraints = {
+        audio: false,
+        video: {
+          facingMode: useFront ? { exact: "user" } : { exact: "environment" }
+        }
+      };
+
+      // Try exact first; if device lacks one side, fall back gracefully
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        document.getElementById('video').srcObject = stream;
-        status.textContent = "Camera opened successfully.";
-      } catch (err) {
-        status.textContent = "Error: " + err.name;
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch {
+        const fallback = {
+          audio: false,
+          video: { facingMode: useFront ? "user" : "environment" }
+        };
+        stream = await navigator.mediaDevices.getUserMedia(fallback);
       }
-    });
-  </script>
+
+      v.srcObject = stream;
+      await v.play().catch(()=>{});
+      log('Camera opened ✔︎ (' + (useFront ? 'front' : 'back') + ' facing)');
+    } catch (err) {
+      log('Camera error: ' + err.name + ' — ' + err.message);
+    }
+  }
+
+  function stopCamera() {
+    try {
+      stream?.getTracks()?.forEach(t => t.stop());
+    } catch {}
+    stream = null;
+    v.srcObject = null;
+    log('Camera stopped.');
+  }
+
+  document.getElementById('openBtn').addEventListener('click', openCamera);
+  document.getElementById('flipBtn').addEventListener('click', () => {
+    useFront = !useFront;
+    openCamera();
+  });
+  document.getElementById('stopBtn').addEventListener('click', stopCamera);
+
+  // Helpful: show if permissions were previously blocked
+  // (Not supported on all Androids, so we don’t rely on it.)
+  if (navigator.permissions?.query) {
+    navigator.permissions.query({ name: 'camera' }).then(p => {
+      if (p.state === 'denied') log('Camera permission is denied for this site. Tap the lock icon → Permissions → Allow.');
+    }).catch(()=>{});
+  }
+})();
+</script>
 </body>
 </html>
