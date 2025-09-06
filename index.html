@@ -1,52 +1,33 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>QuantCam</title>
+  <title>Open Camera</title>
   <style>
-    :root{color-scheme:dark}
-    body{margin:0;background:#0b1220;color:#e7eefc;font-family:system-ui,Arial;height:100vh;display:flex;flex-direction:column;align-items:center}
-    h1{margin:18px 0 8px}
-    .row{display:flex;gap:10px;margin:8px 0 12px}
-    button{background:#2aa6ff;color:#001633;border:0;border-radius:10px;padding:12px 16px;font-weight:700}
-    #status{min-height:22px;color:#8fd18f}
-    video{width:100%;max-width:520px;margin-top:12px;border:2px solid #335;border-radius:12px}
-    small{opacity:.7}
+    html,body{margin:0;padding:0;background:#fff;color:#000;font:16px system-ui,Arial}
+    .wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+    button{font-size:18px;padding:12px 18px}
+    video{width:100%;max-width:420px;border:1px solid #aaa;border-radius:8px}
   </style>
 </head>
 <body>
-  <h1>QuantCam</h1>
-  <div class="row">
-    <button id="openCamera">Open Camera</button>
-    <button id="pingBtn">Run Ping Test</button>
+  <div class="wrap">
+    <h1>Open Camera</h1>
+    <button id="btn">Open Camera</button>
+    <video id="v" autoplay playsinline></video>
+    <div id="msg"></div>
   </div>
-  <div id="status"><small>Ready.</small></div>
-  <video id="cameraFeed" autoplay playsinline muted></video>
-
   <script>
-    // Your deployed Apps Script /exec URL (hard-wired)
-    const BACKEND_URL = "https://script.google.com/macros/s/AKfycbzc0L0-9UmcHQvTxoQ0vIQT4pvDxpwOK1CUJiKivi0tumJpnz0FAf7OlDVHb8bm6xKL/exec";
-
-    const $ = (id)=>document.getElementById(id);
-    const setStatus=(t,ok=true)=>{const s=$("status");s.textContent=t;s.style.color=ok?"#8fd18f":"#ff8a8a";};
-
-    // Open camera on user gesture
-    $("openCamera").addEventListener("click", async ()=>{
-      try{
-        if(!navigator.mediaDevices?.getUserMedia){ setStatus("Camera API not available.", false); return; }
-        const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
-        $("cameraFeed").srcObject = stream;
-        setStatus("Camera streaming.");
-      }catch(e){ setStatus("Camera access failed: "+e.message, false); }
-    });
-
-    // Ping backend
-    $("pingBtn").addEventListener("click", async ()=>{
-      try{
-        const r = await fetch(BACKEND_URL+"?ping=1", {mode:"cors"});
-        setStatus(r.ok ? "OK • "+r.status : "Ping failed • "+r.status, r.ok);
-      }catch(e){ setStatus("Ping failed: "+e, false); }
+    document.getElementById('btn').addEventListener('click', async () => {
+      const msg = document.getElementById('msg');
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        document.getElementById('v').srcObject = stream;
+        msg.textContent = '✅ Camera started';
+      } catch (e) {
+        msg.textContent = '❌ Camera error: ' + e.message;
+      }
     });
   </script>
 </body>
