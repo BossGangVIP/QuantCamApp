@@ -1,19 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>QuantCam</title>
   <style>
-    :root { color-scheme: dark; }
-    body{margin:0;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;background:#0b1220;color:#e7eefc;font-family:system-ui,Arial}
-    h1{margin:18px 0 6px}
-    .row{display:flex;gap:10px;margin:10px 0}
+    :root{color-scheme:dark}
+    body{margin:0;background:#0b1220;color:#e7eefc;font-family:system-ui,Arial;height:100vh;display:flex;flex-direction:column;align-items:center}
+    h1{margin:18px 0 8px}
+    .row{display:flex;gap:10px;margin:8px 0 12px}
     button{background:#2aa6ff;color:#001633;border:0;border-radius:10px;padding:12px 16px;font-weight:700}
-    #status{margin:8px 0 0;color:#8fd18f}
-    video{width:100%;max-width:520px;margin-top:12px;border:2px solid #335;border-radius:10px}
-    .note{max-width:520px;opacity:.7;margin:14px}
-    input{width:100%;max-width:520px;padding:10px;border-radius:8px;border:1px solid #334;background:#0f172a;color:#cfe1ff}
+    #status{min-height:22px;color:#8fd18f}
+    video{width:100%;max-width:520px;margin-top:12px;border:2px solid #335;border-radius:12px}
     small{opacity:.7}
   </style>
 </head>
@@ -27,38 +25,28 @@
   <video id="cameraFeed" autoplay playsinline muted></video>
 
   <script>
-    // HARD-WIRED backend (your /exec URL). No typing needed.
+    // Your deployed Apps Script /exec URL (hard-wired)
     const BACKEND_URL = "https://script.google.com/macros/s/AKfycbzc0L0-9UmcHQvTxoQ0vIQT4pvDxpwOK1CUJiKivi0tumJpnz0FAf7OlDVHb8bm6xKL/exec";
 
-    const $ = (id) => document.getElementById(id);
-    const status = (msg, ok=true) => {
-      const el = $("status");
-      el.textContent = msg;
-      el.style.color = ok ? "#8fd18f" : "#ff8a8a";
-    };
+    const $ = (id)=>document.getElementById(id);
+    const setStatus=(t,ok=true)=>{const s=$("status");s.textContent=t;s.style.color=ok?"#8fd18f":"#ff8a8a";};
 
-    // 1) Camera open on user gesture
-    $("openCamera").addEventListener("click", async () => {
-      try {
-        if (!navigator.mediaDevices?.getUserMedia) {
-          status("Camera API not available in this browser.", false); return;
-        }
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    // Open camera on user gesture
+    $("openCamera").addEventListener("click", async ()=>{
+      try{
+        if(!navigator.mediaDevices?.getUserMedia){ setStatus("Camera API not available.", false); return; }
+        const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
         $("cameraFeed").srcObject = stream;
-        status("Camera streaming.");
-      } catch (err) {
-        status("Camera access failed: " + err.message, false);
-      }
+        setStatus("Camera streaming.");
+      }catch(e){ setStatus("Camera access failed: "+e.message, false); }
     });
 
-    // 2) Ping backend (proves frontend ⇄ backend)
-    $("pingBtn").addEventListener("click", async () => {
-      try {
-        const r = await fetch(BACKEND_URL + "?ping=1", { mode: "cors" });
-        status(r.ok ? "OK • " + r.status : "Ping failed • " + r.status, r.ok);
-      } catch (e) {
-        status("Ping failed: " + e, false);
-      }
+    // Ping backend
+    $("pingBtn").addEventListener("click", async ()=>{
+      try{
+        const r = await fetch(BACKEND_URL+"?ping=1", {mode:"cors"});
+        setStatus(r.ok ? "OK • "+r.status : "Ping failed • "+r.status, r.ok);
+      }catch(e){ setStatus("Ping failed: "+e, false); }
     });
   </script>
 </body>
