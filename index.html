@@ -4,140 +4,130 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>QuantCam</title>
+  <meta http-equiv="Cache-Control" content="no-store" />
   <style>
-    :root { --accent:#2aa8ff; --text:#e8e8e8; --bg:#0e1520; --card:#111a26; }
-    * { box-sizing:border-box; }
-    html,body { height:100%; margin:0; }
+    :root { --bg:#0b1220; --card:#121a2b; --txt:#e8f0ff; --muted:#9db1d1; --accent:#35a0ff; }
+    * { box-sizing: border-box; }
     body {
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      background: var(--bg); color: var(--text);
-      display:flex; align-items:center; justify-content:center;
-      padding:24px;
+      margin:0; min-height:100vh; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: radial-gradient(1200px 700px at 20% -10%, #15213a, transparent) var(--bg);
+      color: var(--txt); display:flex; align-items:center; justify-content:center; padding:20px;
     }
     .card {
-      width:100%; max-width:560px; background:var(--card);
-      border-radius:18px; padding:22px; box-shadow:0 10px 30px rgba(0,0,0,.35)
+      width:min(560px, 92vw); background:var(--card); border:1px solid #1d2942; border-radius:18px;
+      box-shadow:0 10px 30px rgba(0,0,0,.35); padding:22px;
     }
-    h1 { margin:0 0 12px; font-size:32px }
-    p { margin:0 0 14px; opacity:.85 }
-    .row { display:flex; gap:10px; flex-wrap:wrap; margin:12px 0 }
-    button, .input {
-      border:0; border-radius:10px; padding:12px 16px; font-size:16px;
-    }
+    h1 { margin:0 0 10px; font-size:32px; letter-spacing:.5px; }
+    .sub { color:var(--muted); margin-bottom:18px; font-size:14px; line-height:1.4; }
+    .row { display:flex; gap:10px; flex-wrap:wrap; }
     button {
-      background:var(--accent); color:#001321; font-weight:600; cursor:pointer;
+      background:var(--accent); color:#001a2b; border:0; padding:12px 16px; border-radius:10px;
+      font-weight:700; cursor:pointer; font-size:15px;
     }
-    button.secondary { background:#1f2a38; color:var(--text); }
-    input[type="file"] { display:none }
-    label.file {
-      background:#1f2a38; color:var(--text); cursor:pointer; display:inline-block;
-    }
-    video, canvas { width:100%; border:2px solid #2b394b; border-radius:10px; }
-    .status { margin-top:10px; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-    .ok { color:#67ff9e } .err { color:#ff6a6a }
-    small.hint { display:block; opacity:.7; margin-top:10px; line-height:1.4 }
-    .tiny { font-size:12px; opacity:.8 }
-    .endpoint { word-break:break-all; font-size:12px; opacity:.8; margin-top:6px }
+    button.secondary { background:#233659; color:#d8e6ff; }
+    button:disabled { opacity:.6; cursor:not-allowed; }
+    #status { margin-top:12px; color:var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    video, canvas { width:100%; max-height:55vh; border-radius:12px; margin-top:14px; background:#000; }
+    .hide { display:none; }
+    .ok { color:#87e98b; }
+    .err { color:#ff9a9a; }
   </style>
 </head>
 <body>
   <div class="card">
     <h1>QuantCam</h1>
-    <p>Point • Shoot • Quant — private test launcher</p>
+    <div class="sub">Point • Shoot • Quant — private test build</div>
 
     <div class="row">
-      <button id="openCamera">Open Camera</button>
-      <button id="snapSend" class="secondary">Capture &amp; Send</button>
+      <button id="openBtn">Open Camera</button>
+      <button id="snapBtn" class="secondary" disabled>Capture &amp; Send</button>
       <button id="pingBtn" class="secondary">Run Ping Test</button>
     </div>
 
-    <video id="cameraFeed" autoplay playsinline></video>
-    <canvas id="frame" style="display:none;"></canvas>
+    <div id="status">Ready.</div>
 
-    <div class="status" id="status">Ready.</div>
-    <div class="endpoint" id="endpoint"></div>
-    <small class="hint">
-      If Drive/Docs tries to hijack links on Android, long-press the link and choose
-      <b>Open in browser</b> or disable “Open supported links” for Drive/Docs in Android settings.
-    </small>
-    <div class="tiny" style="margin-top:12px">
-      Tip: you can override the backend with <code>?exec=YOUR_EXEC_URL</code> in the page URL.
-    </div>
+    <video id="preview" class="hide" autoplay playsinline muted></video>
+    <canvas id="frame" class="hide"></canvas>
   </div>
 
-<script>
-/* -------------------- CONFIG (hard-wired; overridable via ?exec=) -------------------- */
-// Default backend (your Apps Script /exec URL)
-const DEFAULT_EXEC =
-  "https://script.google.com/macros/s/AKfycbzimb_rQvHZnO-KWwxG2xGvXhDylH1nHqCII5F9zmGr16SOwQ4EpM125RO7Ov1E_mIOqA/exec";
+  <script>
+    // HARD-WIRED BACKEND (your /exec URL)
+    const BACKEND_URL = "https://script.google.com/macros/s/AKfycbzimb_rQvHZnO-KWwxG2xGvXhDylH1nHqCII5F9zmGr16SOwQ4EpM125RO7Ov1E_mIOqA/exec";
 
-/* Use ?exec= to override (handy if you redeploy) */
-const urlExec = new URLSearchParams(location.search).get("exec");
-const BACKEND_URL = (urlExec && urlExec.startsWith("http")) ? urlExec : DEFAULT_EXEC;
+    const openBtn = document.getElementById('openBtn');
+    const snapBtn = document.getElementById('snapBtn');
+    const pingBtn = document.getElementById('pingBtn');
+    const statusEl = document.getElementById('status');
+    const video = document.getElementById('preview');
+    const canvas = document.getElementById('frame');
+    let stream = null;
 
-/* -------------------- UI wire-up -------------------- */
-const $ = (id) => document.getElementById(id);
-const statusEl = $("status");
-$("endpoint").textContent = "Backend: " + BACKEND_URL;
+    function say(msg, cls) {
+      statusEl.className = cls || '';
+      statusEl.textContent = msg;
+      console.log(msg);
+    }
 
-function setStatus(txt, cls) {
-  statusEl.className = "status " + (cls || "");
-  statusEl.textContent = txt;
-}
+    // --- Open camera
+    openBtn.addEventListener('click', async () => {
+      try {
+        say('Requesting camera…');
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+        video.srcObject = stream;
+        video.classList.remove('hide');
+        snapBtn.disabled = false;
+        say('Camera ready.', 'ok');
+      } catch (err) {
+        say('Camera access failed: ' + err.message, 'err');
+      }
+    });
 
-/* -------------------- Camera open -------------------- */
-let stream = null;
-$("openCamera").addEventListener("click", async () => {
-  try {
-    setStatus("Requesting camera…");
-    stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-    $("cameraFeed").srcObject = stream;
-    setStatus("Camera ready.", "ok");
-  } catch (err) {
-    setStatus("Camera access failed: " + err.message, "err");
-  }
-});
+    // --- Capture & send to Apps Script
+    snapBtn.addEventListener('click', async () => {
+      if (!stream) { say('Open camera first.', 'err'); return; }
+      try {
+        // draw frame
+        const track = stream.getVideoTracks()[0];
+        const settings = track.getSettings();
+        const w = settings.width || 1280, h = settings.height || 720;
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(video, 0, 0, w, h);
 
-/* -------------------- Capture & send to Apps Script -------------------- */
-$("snapSend").addEventListener("click", async () => {
-  try {
-    if (!stream) throw new Error("Open Camera first.");
-    const video = $("cameraFeed");
-    const canvas = $("frame");
-    // size canvas to video frame
-    const w = video.videoWidth || 1280, h = video.videoHeight || 720;
-    canvas.width = w; canvas.height = h;
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(video, 0, 0, w, h);
-    setStatus("Encoding…");
-    const blob = await new Promise(res => canvas.toBlob(res, "image/jpeg", 0.92));
-    const form = new FormData();
-    form.append("file", blob, "quantcam.jpg");
-    form.append("source", "QuantCam-PWA");
-    setStatus("Uploading…");
-    const r = await fetch(BACKEND_URL, { method: "POST", body: form });
-    // Apps Script often returns text/plain
-    const txt = await r.text();
-    if (!r.ok) throw new Error(r.status + " " + txt);
-    setStatus("Uploaded • Response: " + txt.slice(0, 400), "ok");
-  } catch (err) {
-    setStatus("Upload failed: " + err.message, "err");
-  }
-});
+        say('Encoding photo…');
+        const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.9));
 
-/* -------------------- Ping test -------------------- */
-$("pingBtn").addEventListener("click", async () => {
-  try {
-    setStatus("Pinging…");
-    const r = await fetch(BACKEND_URL + (BACKEND_URL.includes("?") ? "&" : "?") + "ping=1",
-                          { method:"GET", cache:"no-cache" });
-    const txt = await r.text();
-    if (!r.ok) throw new Error(r.status + " " + txt);
-    setStatus("Ping OK • " + txt.slice(0, 200), "ok");
-  } catch (err) {
-    setStatus("Ping failed: " + err.message, "err");
-  }
-});
-</script>
+        const form = new FormData();
+        form.append('file', blob, `quantcam_${Date.now()}.jpg`);
+        form.append('ts', new Date().toISOString());
+        // Optional flags your backend can use:
+        form.append('route', 'upload');
+        form.append('source', 'quantcam');
+
+        say('Uploading…');
+        const r = await fetch(BACKEND_URL, { method: 'POST', body: form });
+        const txt = await r.text();
+        if (!r.ok) throw new Error(`HTTP ${r.status} ${txt}`);
+        say('Upload OK: ' + txt.slice(0, 200), 'ok');
+      } catch (err) {
+        say('Upload failed: ' + err.message, 'err');
+      }
+    });
+
+    // --- Ping
+    pingBtn.addEventListener('click', async () => {
+      try {
+        say('Pinging…');
+        const r = await fetch(BACKEND_URL + '?ping=1', { method: 'GET', cache: 'no-store' });
+        const txt = await r.text();
+        if (!r.ok) throw new Error(`HTTP ${r.status} ${txt}`);
+        say('Ping 200: ' + txt.slice(0, 200), 'ok');
+      } catch (err) {
+        say('Ping failed: ' + err.message, 'err');
+      }
+    });
+
+    // iOS needs a user gesture before camera; handled via button.
+    // Make sure this page is served over https (GitHub Pages is).
+  </script>
 </body>
 </html>
