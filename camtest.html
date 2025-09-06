@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Camera Test</title>
+<style>
+  body {font-family: system-ui, -apple-system, Arial; margin:0; padding:24px; background:#0b1220; color:#e6eefb;}
+  .wrap {max-width:700px; margin:0 auto;}
+  h1 {margin:0 0 12px;}
+  button {background:#2aa9ff; color:#001; border:0; padding:14px 18px; border-radius:10px; font-size:16px;}
+  #status {margin-top:12px; opacity:.9}
+  video {margin-top:16px; width:100%; max-height:70vh; background:#000; border:2px solid #334; border-radius:10px;}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Camera Test</h1>
+    <button id="openCam">Open Camera</button>
+    <div id="status">Ready.</div>
+    <video id="v" autoplay playsinline muted></video>
+  </div>
+  <script>
+    const statusEl = document.getElementById('status');
+    const v = document.getElementById('v');
+    document.getElementById('openCam').addEventListener('click', async () => {
+      statusEl.textContent = 'Requesting camera…';
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        v.srcObject = stream;
+        statusEl.textContent = 'Camera opened.';
+      } catch (err) {
+        statusEl.textContent = 'Camera access failed: ' + err.name + (err.message ? ' — ' + err.message : '');
+      }
+    });
+  </script>
+</body>
+</html>
