@@ -2,74 +2,92 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>QuantCam</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #0a0a0a;
-      color: #fff;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      margin: 0;
-    }
-    button {
-      background: #2196f3;
-      color: white;
-      border: none;
-      padding: 1rem 2rem;
-      font-size: 1rem;
-      border-radius: 6px;
-      cursor: pointer;
-      margin-top: 1rem;
-    }
-    #status {
-      margin-top: 1.5rem;
-      font-size: 0.9rem;
-      color: #ccc;
-    }
-    video {
-      margin-top: 1rem;
-      max-width: 100%;
-      border: 2px solid #444;
-      border-radius: 6px;
-    }
+    body{margin:0;background:#0a0a0a;color:#fff;font:16px/1.45 system-ui,Segoe UI,Roboto,Arial;display:flex;min-height:100vh;align-items:center;justify-content:center}
+    .card{width:100%;max-width:720px;background:#121212;border-radius:14px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    h1{margin:0 0 6px;font-size:28px}
+    .sub{margin:0 0 16px;color:#bbb}
+    .row{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+    button{background:#2196f3;color:#001428;border:0;border-radius:10px;padding:12px 16px;font-weight:700;cursor:pointer}
+    #status{margin-top:12px;color:#bbb;white-space:pre-wrap}
+    input[type=file]{display:block;width:100%;margin:10px 0;padding:8px;background:#181818;border:1px solid #333;border-radius:10px;color:#ddd}
+    .hint{font-size:12px;color:#9aa0a6;margin-top:10px}
+    iframe{width:100%;height:120px;border:1px solid #333;border-radius:8px;background:#0f0f0f}
+    video{width:100%;max-height:50vh;border:1px solid #333;border-radius:12px;background:#000}
   </style>
 </head>
 <body>
-  <h1>QuantCam</h1>
-  <button id="openCamera">Open Camera</button>
-  <button id="pingBtn">Run Ping Test</button>
-  <video id="cameraFeed" autoplay playsinline></video>
-  <div id="status">Ready.</div>
+  <div class="card">
+    <h1>QuantCam</h1>
+    <p class="sub">Point • Shoot • Quant — PWA test</p>
+
+    <div class="row">
+      <button id="pingBtn">Run Ping Test</button>
+      <button id="openBtn">Open Camera</button>
+    </div>
+    <video id="cam" autoplay playsinline muted></video>
+
+    <div id="status">Ready.</div>
+    <div class="hint">If ping fails, deploy Apps Script as Web app with <b>Who has access: Anyone</b> and use the <b>/exec</b> URL.</div>
+
+    <hr style="margin:18px 0;border:0;border-top:1px solid #2a2a2a">
+
+    <!-- Capture & Send via multipart form POST -->
+    <form id="uploadForm" method="POST" enctype="multipart/form-data" target="uploadTarget">
+      <input id="fileInput" type="file" name="file" accept="image/*" capture="environment">
+      <input type="hidden" name="meta" id="metaField" value="{}">
+      <div class="row"><button type="submit">Capture & Send</button></div>
+      <div class="hint">Response from server appears below.</div>
+    </form>
+    <iframe name="uploadTarget" title="Upload Result"></iframe>
+  </div>
 
   <script>
-    // Hard-coded backend URL (your /exec link)
+    // === YOUR Apps Script /exec URL (change only this if you redeploy) ===
     const BACKEND_URL = "https://script.google.com/macros/s/AKfycbzimb_rQvHZnO-KWwxG2xGvXhDylH1nHqCII5F9zmGr16SOwQ4EpM125RO7Ov1E_mIOqA/exec";
 
-    // Ping test
-    document.getElementById("pingBtn").addEventListener("click", async () => {
-      try {
-        const res = await fetch(BACKEND_URL + "?ping=1");
-        const txt = await res.text();
-        document.getElementById("status").innerText = "Ping response: " + txt;
-      } catch (err) {
-        document.getElementById("status").innerText = "Ping failed: " + err;
-      }
+    // Wire form to backend
+    const form = document.getElementById("uploadForm");
+    form.action = BACKEND_URL + (BACKEND_URL.includes("?") ? "&" : "?") + "upload=1";
+
+    // JSONP (no CORS)
+    function jsonp(url){
+      return new Promise((resolve,reject)=>{
+        const cb = "cb_"+Math.random().toString(36).slice(2);
+        const s = document.createElement("script");
+        s.src = url + (url.includes("?")?"&":"?") + "callback=" + cb;
+        s.onerror = ()=>{ delete window[cb]; s.remove(); reject(new Error("JSONP load error")); };
+        window[cb] = (data)=>{ delete window[cb]; s.remove(); resolve(data); };
+        document.body.appendChild(s);
+      });
+    }
+
+    const statusEl = document.getElementById("status");
+
+    document.getElementById("pingBtn").addEventListener("click", async ()=>{
+      statusEl.textContent = "Pinging…";
+      try{
+        const data = await jsonp(BACKEND_URL + "?ping=1");
+        statusEl.textContent = "Ping OK: " + JSON.stringify(data);
+      }catch(e){ statusEl.textContent = "Ping failed: " + e.message; }
     });
 
-    // Open camera
-    document.getElementById("openCamera").addEventListener("click", async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        document.getElementById("cameraFeed").srcObject = stream;
-        document.getElementById("status").innerText = "Camera is active.";
-      } catch (err) {
-        document.getElementById("status").innerText = "Camera access failed: " + err;
-      }
+    document.getElementById("openBtn").addEventListener("click", async ()=>{
+      try{
+        const stream = await navigator.mediaDevices.getUserMedia({ video:{facingMode:"environment"}, audio:false });
+        const cam = document.getElementById("cam");
+        cam.srcObject = stream; await cam.play();
+        statusEl.textContent = "Camera ready.";
+      }catch(e){ statusEl.textContent = "Camera access failed: " + e.message; }
+    });
+
+    // Attach metadata before submit
+    const metaField = document.getElementById("metaField");
+    form.addEventListener("submit", ()=>{
+      metaField.value = JSON.stringify({ source:"QuantCam", ts:new Date().toISOString(), ua:navigator.userAgent });
+      statusEl.textContent = "Uploading…";
     });
   </script>
 </body>
