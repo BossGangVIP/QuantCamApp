@@ -1,45 +1,66 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>QuantCam Settings</title>
-  <link rel="stylesheet" href="./styles.css" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>QuantCam • Settings</title>
+  <link rel="stylesheet" href="./styles.css"/>
+  <style>
+    .panel{max-width:760px;margin:24px auto;padding:18px;border:1px solid var(--ring);border-radius:14px;background:var(--panel)}
+    .row{margin:14px 0}
+    .actions{display:flex;gap:12px;margin-top:18px}
+    .btn{background:var(--accent);color:#fff;border:none;padding:10px 14px;border-radius:10px;cursor:pointer}
+    .link{color:#aac3ff;text-decoration:none}
+  </style>
 </head>
-<body>
+<body class="app">
   <header class="appbar">
     <div class="app-title">Settings</div>
-    <a class="icon-btn" href="./index.html" aria-label="Back" title="Back">⟵</a>
+    <a class="icon-btn" href="./" title="Back">🏠</a>
   </header>
 
   <main class="content">
-    <form id="settings-form">
-      <!-- Theme -->
-      <div class="row">
-        <h3>Theme</h3>
-        <label><input type="radio" name="theme" value="light"> Light</label><br/>
-        <label><input type="radio" name="theme" value="dark"> Dark</label>
-      </div>
+    <div class="panel">
+      <form id="settings-form">
+        <div class="row">
+          <h3>Ingested badge duration</h3>
+          <label><input type="radio" name="badge" value="1.5"> 1.5 seconds</label><br/>
+          <label><input type="radio" name="badge" value="15"> 15 seconds</label><br/>
+          <label><input type="radio" name="badge" value="30"> 30 seconds</label><br/>
+          <label><input type="radio" name="badge" value="hold"> Until dismissed</label>
+        </div>
 
-      <!-- Badge duration -->
-      <div class="row">
-        <h3>Ingested badge duration</h3>
-        <label><input type="radio" name="badge" value="1.5"> 1.5 seconds</label><br/>
-        <label><input type="radio" name="badge" value="15"> 15 seconds</label><br/>
-        <label><input type="radio" name="badge" value="30"> 30 seconds</label><br/>
-        <label><input type="radio" name="badge" value="hold"> Until dismissed</label>
-      </div>
+        <div class="row">
+          <h3>Photo preview</h3>
+          <label><input type="radio" name="preview" value="on"> On</label>
+          <label style="margin-left:12px"><input type="radio" name="preview" value="off"> Off</label>
+        </div>
 
-      <!-- Preview toggle -->
-      <div class="row">
-        <h3>Photo Preview</h3>
-        <label><input type="checkbox" name="preview" value="on"> Show preview after capture</label>
-      </div>
-
-      <button type="submit">Save</button>
-    </form>
+        <div class="actions">
+          <button type="submit" class="btn">Save</button>
+          <a class="link" href="./">Back to app</a>
+        </div>
+      </form>
+    </div>
   </main>
 
-  <script src="./app.js"></script>
+  <script>
+    function getSettings(){ try{ return JSON.parse(localStorage.getItem('quantcam-settings'))||{} }catch{ return {} } }
+    function saveSettings(s){ localStorage.setItem('quantcam-settings', JSON.stringify(s)); }
+
+    const form = document.getElementById('settings-form');
+    const s = getSettings();
+    (form.badge.value = s.badge || '1.5');
+    (form.preview.value = s.preview || 'on');
+
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      saveSettings({
+        badge: form.badge.value,
+        preview: form.preview.value
+      });
+      history.back();
+    });
+  </script>
 </body>
 </html>
