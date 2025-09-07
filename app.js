@@ -1,73 +1,102 @@
-// Settings helpers
-function getSettings() {
-  try {
-    return JSON.parse(localStorage.getItem("quantcam-settings")) || {};
-  } catch {
-    return {};
-  }
-}
+// Elements
+const v = document.getElementById('v');
+const badge = document.getElementById('badge');
+const statusEl = document.getElementById('status');
+const flipBtn = document.getElementById('flip');
+const shutterBtn = document.getElementById('shutter');
+const picker = document.getElementById('picker');
+const previewEl = document.getElementById('preview');
 
+// State
+let facing = 'environment';
+let stream = null;
+let badgeTimer = null;
+
+// ---- Settings storage (single object)
+function getSettings() {
+  try { return JSON.parse(localStorage.getItem('quantcam-settings')) || {}; }
+  catch { return {}; }
+}
 function saveSettings(s) {
-  localStorage.setItem("quantcam-settings", JSON.stringify(s));
+  localStorage.setItem('quantcam-settings', JSON.stringify(s));
 }
 
 // Badge duration helper
 function badgeMs() {
   const v = getSettings().badge;
-  if (v === "1.5") return 1500;       // quick option
-  if (v === "15") return 15000;       // medium
-  if (v === "30") return 30000;       // long
-  return null;                        // hold until dismissed
+  if (v === '1.5') return 1500;     // quick
+  if (v === '15')  return 15000;    // medium
+  if (v === '30')  return 30000;    // long
+  return null;                      // hold
 }
 
-// Show ingest badge
-function showBadge() {
-  const badge = document.getElementById("badge");
-  if (!badge) return;
-  badge.classList.remove("hidden");
-
-  const ms = badgeMs();
-  if (ms) {
-    setTimeout(() => badge.classList.add("hidden"), ms);
-  }
-}
-
-// Init camera (unchanged)
-async function initCamera() {
+// ---- Camera
+async function openCamera() {
+  statusEl.textContent = 'Requesting camera…';
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    const video = document.getElementById("view");
-    if (video) {
-      video.srcObject = stream;
-      await video.play();
-    }
+    if (stream) stopCamera(); // prevent NotReadableError on flip
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: facing } },
+      audio: false
+    });
+    v.srcObject = stream;
+    statusEl.textContent = 'Camera ready';
   } catch (err) {
-    console.error("Camera failed:", err);
-    document.getElementById("status").textContent =
-      "Camera failed: " + err.name + " — " + err.message;
+    statusEl.textContent = `Camera failed: ${err.name} — ${err.message || 'Could not start video source'}`;
+    console.error(err);
   }
 }
+function stopCamera(){ try{ stream?.getTracks().forEach(t=>t.stop()); }catch{} stream=null; v.srcObject=null; }
 
-// Handle settings form
-document.addEventListener("DOMContentLoaded", () => {
-  const form = document.getElementById("settings-form");
-  if (form) {
-    const s = getSettings();
-    if (s.theme) form.theme.value = s.theme;
-    if (s.badge) form.badge.value = s.badge;
-    if (s.preview === "on") form.preview.checked = true;
-
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const settings = {
-        theme: form.theme.value,
-        badge: form.badge.value,
-        preview: form.preview.checked ? "on" : "off",
-      };
-      saveSettings(settings);
-      alert("Settings saved.");
-    });
-  }
-
-  initCamera();
+// ---- UI actions
+flipBtn.addEventListener('click', async () => {
+  facing = (facing === 'environment') ? 'user' : 'environment';
+  await openCamera();
 });
+
+shutterBtn.addEventListener('click', () => captureFromVideo());
+
+picker.addEventListener('change', async () => {
+  if (picker.files && picker.files[0]) {
+    const url = URL.createObjectURL(picker.files[0]);
+    await showPreview(url);
+    URL.revokeObjectURL(url);
+    showBadge();
+    picker.value = '';
+  }
+});
+
+// ---- Capture + preview
+function captureFromVideo() {
+  const w = v.videoWidth || 1280;
+  const h = v.videoHeight || 720;
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(v, 0, 0, w, h);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+  showPreview(dataUrl);
+  showBadge();
+}
+
+async function showPreview(src) {
+  const s = getSettings();
+  const on = (s.preview ?? 'on') === 'on';
+  if (!on) { hidePreview(); return; }
+  previewEl.src = src;
+  previewEl.classList.remove('hidden');
+}
+function hidePreview(){ previewEl.classList.add('hidden'); }
+previewEl?.addEventListener('click', hidePreview);
+
+// ---- Badge control
+function showBadge() {
+  badge.classList.remove('hidden');
+  clearTimeout(badgeTimer);
+  const ms = badgeMs();
+  if (ms) badgeTimer = setTimeout(() => badge.classList.add('hidden'), ms);
+}
+badge.addEventListener('click', () => { clearTimeout(badgeTimer); badge.classList.add('hidden'); });
+
+// ---- Boot
+openCamera();
