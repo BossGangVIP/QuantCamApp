@@ -1,41 +1,48 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>QuantCam</title>
 
-  <!-- Manifest and favicon -->
-  <link rel="manifest" href="./manifest.json" />
-  <link rel="icon" href="./favicon.ico" />
+  <!-- PWA bits (unchanged) -->
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#0b1229" />
+  <link rel="icon" href="./favicon.ico">
 
-  <!-- Styles -->
-  <link rel="stylesheet" href="style.css" />
+  <!-- Icons for install come from /icons/quantcam-192.png and /icons/quantcam-512.png (manifest.json) -->
+
+  <link rel="stylesheet" href="./styles.css" />
 </head>
-<body>
-  <div class="app-container">
-    <header class="app-header">
-      <h1>QuantCam</h1>
-      <button id="settingsButton" class="icon-button">
-        <span class="gear-icon">⚙️</span>
-      </button>
-    </header>
+<body class="app">
+  <header class="appbar">
+    <div class="app-title">QuantCam</div>
+    <a class="icon-btn" href="./settings.html" aria-label="Settings" title="Settings">⚙️</a>
+  </header>
 
-    <!-- Camera -->
-    <main class="camera-section">
-      <video id="camera" autoplay playsinline></video>
-      <div id="badge" class="badge hidden">Ingested ✓</div>
-      <p id="cameraStatus">Camera ready</p>
-    </main>
+  <main class="content">
+    <video id="view" autoplay playsinline muted></video>
+    <canvas id="canvas" class="hidden"></canvas>
+    <div id="status" class="status">Camera ready</div>
+  </main>
 
-    <!-- Controls -->
-    <footer class="controls">
-      <button id="switchCamera" class="control-btn">📷</button>
-      <button id="capture" class="control-btn main-btn">⬤</button>
-      <button id="gallery" class="control-btn">📁</button>
-    </footer>
-  </div>
+  <footer class="toolbar">
+    <button id="flip" class="icon-btn" title="Flip camera" aria-label="Flip camera">🔁</button>
+    <button id="shutter" class="shutter" title="Take photo" aria-label="Take photo"></button>
+    <label class="icon-btn" title="Upload from gallery" aria-label="Upload from gallery">📁
+      <input type="file" id="picker" accept="image/*" class="hidden">
+    </label>
+  </footer>
 
-  <script src="app.js"></script>
+  <!-- small top badge -->
+  <div id="badge" class="badge hidden" role="status" aria-live="polite">Ingested ✓</div>
+
+  <script>
+    // keep existing SW behavior if you were using it
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(console.warn));
+    }
+  </script>
+  <script src="./app.js"></script>
 </body>
 </html>
