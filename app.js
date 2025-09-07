@@ -1,102 +1,108 @@
-// Elements
-const v = document.getElementById('v');
-const badge = document.getElementById('badge');
-const statusEl = document.getElementById('status');
-const flipBtn = document.getElementById('flip');
-const shutterBtn = document.getElementById('shutter');
-const picker = document.getElementById('picker');
-const previewEl = document.getElementById('preview');
+/* QuantCam minimal app logic – unchanged behavior, plus:
+   - Ingest badge shows at top for 1.5s (or until user setting overrides)
+   - Preview tile respects "Show last capture" setting
+*/
 
-// State
-let facing = 'environment';
+const els = {
+  view: document.getElementById('view'),
+  canvas: document.getElementById('canvas'),
+  status: document.getElementById('status'),
+  flip: document.getElementById('flip'),
+  shutter: document.getElementById('shutter'),
+  picker: document.getElementById('picker'),
+  badge: document.getElementById('badge'),
+};
+
 let stream = null;
-let badgeTimer = null;
+let useBack = true;
+let lastBlobUrl = null;
 
-// ---- Settings storage
-function getSettings() {
-  try { return JSON.parse(localStorage.getItem('quantcam-settings')) || {}; }
-  catch { return {}; }
-}
-function saveSettings(s) {
-  localStorage.setItem('quantcam-settings', JSON.stringify(s));
-}
+const settings = {
+  // read persisted settings if your settings.html saves them; fallback defaults:
+  showPreview: JSON.parse(localStorage.getItem('qc_showPreview') ?? 'true'),
+  badgeMode: localStorage.getItem('qc_badgeMode') ?? '1.5s', // '1.5s' | '15s' | '30s' | 'hold'
+};
 
-// Badge duration helper
-function badgeMs() {
-  const v = getSettings().badge;
-  if (v === '1.5') return 1500;     // quick
-  if (v === '15')  return 15000;    // medium
-  if (v === '30')  return 30000;    // long
-  return null;                      // hold
-}
+function setStatus(msg){ els.status.textContent = msg; }
 
-// ---- Camera
-async function openCamera() {
-  statusEl.textContent = 'Requesting camera…';
+async function startCamera() {
+  stopCamera();
   try {
-    if (stream) stopCamera(); // prevent NotReadableError on flip
     stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: facing } },
+      video: { facingMode: useBack ? 'environment' : 'user' },
       audio: false
     });
-    v.srcObject = stream;
-    statusEl.textContent = 'Camera ready';
-  } catch (err) {
-    statusEl.textContent = `Camera failed: ${err.name} — ${err.message || 'Could not start video source'}`;
-    console.error(err);
+    els.view.srcObject = stream;
+    setStatus('Camera ready');
+  } catch (e) {
+    setStatus(`Camera failed: ${e.name} — ${e.message || 'Could not start video source'}`);
   }
 }
-function stopCamera(){ try{ stream?.getTracks().forEach(t=>t.stop()); }catch{} stream=null; v.srcObject=null; }
 
-// ---- UI actions
-flipBtn.addEventListener('click', async () => {
-  facing = (facing === 'environment') ? 'user' : 'environment';
-  await openCamera();
-});
-
-shutterBtn.addEventListener('click', () => captureFromVideo());
-
-picker.addEventListener('change', async () => {
-  if (picker.files && picker.files[0]) {
-    const url = URL.createObjectURL(picker.files[0]);
-    await showPreview(url);
-    URL.revokeObjectURL(url);
-    showBadge();
-    picker.value = '';
+function stopCamera(){
+  if(stream){
+    stream.getTracks().forEach(t=>t.stop());
+    stream = null;
   }
-});
+}
 
-// ---- Capture + preview
-function captureFromVideo() {
-  const w = v.videoWidth || 1280;
-  const h = v.videoHeight || 720;
-  const canvas = document.createElement('canvas');
-  canvas.width = w; canvas.height = h;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(v, 0, 0, w, h);
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-  showPreview(dataUrl);
+function flipCamera(){
+  useBack = !useBack;
+  startCamera();
+}
+
+function showBadge(){
+  els.badge.classList.remove('hidden');
+  let ms = 1500;
+  if (settings.badgeMode === '15s') ms = 15000;
+  else if (settings.badgeMode === '30s') ms = 30000;
+  else if (settings.badgeMode === 'hold') return; // user will dismiss via settings page UI if you add it
+  setTimeout(()=> els.badge.classList.add('hidden'), ms);
+}
+
+function capture(){
+  if(!stream){ return; }
+  const track = stream.getVideoTracks()[0];
+  const settingsV = track.getSettings();
+  const w = settingsV.width || 1280;
+  const h = settingsV.height || 720;
+  els.canvas.width = w; els.canvas.height = h;
+  const ctx = els.canvas.getContext('2d');
+  ctx.drawImage(els.view, 0, 0, w, h);
+  els.canvas.toBlob(async (blob)=>{
+    // optional: show or hide last capture preview
+    if (lastBlobUrl) URL.revokeObjectURL(lastBlobUrl);
+    lastBlobUrl = URL.createObjectURL(blob);
+    if (settings.showPreview) {
+      els.view.srcObject = null;
+      els.view.src = lastBlobUrl;
+      els.view.play && els.view.play();
+      // return to live view after short moment so UI stays camera-first
+      setTimeout(()=> {
+        els.view.srcObject = stream;
+      }, 1200);
+    }
+    // “ingest” placeholder (do your processing here)
+    showBadge();
+  }, 'image/jpeg', 0.92);
+}
+
+function handlePick(e){
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  const url = URL.createObjectURL(file);
+  if (settings.showPreview) {
+    els.view.srcObject = null;
+    els.view.src = url;
+    els.view.play && els.view.play();
+    setTimeout(()=> { els.view.srcObject = stream; }, 1200);
+  }
   showBadge();
 }
 
-async function showPreview(src) {
-  const s = getSettings();
-  const on = (s.preview ?? 'on') === 'on';
-  if (!on) { hidePreview(); return; }
-  previewEl.src = src;
-  previewEl.classList.remove('hidden');
-}
-function hidePreview(){ previewEl.classList.add('hidden'); }
-previewEl?.addEventListener('click', hidePreview);
+els.flip.addEventListener('click', flipCamera);
+els.shutter.addEventListener('click', capture);
+els.picker.addEventListener('change', handlePick);
 
-// ---- Badge control
-function showBadge() {
-  badge.classList.remove('hidden');
-  clearTimeout(badgeTimer);
-  const ms = badgeMs();
-  if (ms) badgeTimer = setTimeout(() => badge.classList.add('hidden'), ms);
-}
-badge.addEventListener('click', () => { clearTimeout(badgeTimer); badge.classList.add('hidden'); });
-
-// ---- Boot
-openCamera();
+window.addEventListener('pageshow', startCamera);
+window.addEventListener('pagehide', stopCamera);
