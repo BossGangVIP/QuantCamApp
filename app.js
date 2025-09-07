@@ -1,68 +1,73 @@
-/* QuantCam minimal controller */
-let stream = null;
-let currentFacing = "environment"; // or "user"
-
-const v = document.getElementById("v");
-const flipBtn = document.getElementById("flip");
-const shutterBtn = document.getElementById("shutter");
-const picker = document.getElementById("picker");
-const badge = document.getElementById("badge");
-const statusEl = document.getElementById("status");
-const canvas = document.getElementById("canvas");
-
-function setStatus(t){ if(statusEl) statusEl.textContent = t; }
-
-function stopStream() {
-  if (stream) {
-    stream.getTracks().forEach(t => t.stop());
-    stream = null;
-  }
-}
-
-async function openCam(facing = currentFacing) {
+// Settings helpers
+function getSettings() {
   try {
-    setStatus("Requesting camera…");
-    stopStream();                              // <-- critical fix
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: facing }, audio: false
-    });
-    if (!v) throw new Error("video element missing");
-    v.srcObject = stream;
-    currentFacing = facing;
-    setStatus("Camera ready.");
-  } catch (err) {
-    stopStream();
-    setStatus(`Camera failed: ${err.name} — ${err.message || "Could not start video source"}`);
+    return JSON.parse(localStorage.getItem("quantcam-settings")) || {};
+  } catch {
+    return {};
   }
 }
 
-flipBtn?.addEventListener("click", () => {
-  openCam(currentFacing === "user" ? "environment" : "user");
-});
+function saveSettings(s) {
+  localStorage.setItem("quantcam-settings", JSON.stringify(s));
+}
 
-shutterBtn?.addEventListener("click", () => {
-  if (!v) return;
-  const w = v.videoWidth || 1280, h = v.videoHeight || 720;
-  canvas.width = w; canvas.height = h;
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(v, 0, 0, w, h);
-  // ingest simulation
-  badge?.classList.remove("hidden");
-  setTimeout(() => badge?.classList.add("hidden"), 1500);
-});
+// Badge duration helper
+function badgeMs() {
+  const v = getSettings().badge;
+  if (v === "1.5") return 1500;       // quick option
+  if (v === "15") return 15000;       // medium
+  if (v === "30") return 30000;       // long
+  return null;                        // hold until dismissed
+}
 
-picker?.addEventListener("change", async (e) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
-  const img = new Image();
-  img.onload = () => {
-    canvas.width = img.width; canvas.height = img.height;
-    canvas.getContext("2d").drawImage(img, 0, 0);
-    badge?.classList.remove("hidden");
-    setTimeout(() => badge?.classList.add("hidden"), 1500);
-  };
-  img.src = URL.createObjectURL(file);
-});
+// Show ingest badge
+function showBadge() {
+  const badge = document.getElementById("badge");
+  if (!badge) return;
+  badge.classList.remove("hidden");
 
-window.addEventListener("pageshow", () => openCam(currentFacing));
-window.addEventListener("pagehide", stopStream);
+  const ms = badgeMs();
+  if (ms) {
+    setTimeout(() => badge.classList.add("hidden"), ms);
+  }
+}
+
+// Init camera (unchanged)
+async function initCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    const video = document.getElementById("view");
+    if (video) {
+      video.srcObject = stream;
+      await video.play();
+    }
+  } catch (err) {
+    console.error("Camera failed:", err);
+    document.getElementById("status").textContent =
+      "Camera failed: " + err.name + " — " + err.message;
+  }
+}
+
+// Handle settings form
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("settings-form");
+  if (form) {
+    const s = getSettings();
+    if (s.theme) form.theme.value = s.theme;
+    if (s.badge) form.badge.value = s.badge;
+    if (s.preview === "on") form.preview.checked = true;
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const settings = {
+        theme: form.theme.value,
+        badge: form.badge.value,
+        preview: form.preview.checked ? "on" : "off",
+      };
+      saveSettings(settings);
+      alert("Settings saved.");
+    });
+  }
+
+  initCamera();
+});
