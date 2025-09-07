@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QuantCam • Settings</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="styles.css" />
+  <meta name="theme-color" content="#0b1220" />
+</head>
+<body>
+  <div class="page">
+    <h2>Settings</h2>
+    <div class="card">
+      <label for="camFacing">Default camera</label>
+      <select id="camFacing">
+        <option value="environment">Rear (environment)</option>
+        <option value="user">Front (selfie)</option>
+      </select>
+      <label for="toastMode">Success check behavior</label>
+      <select id="toastMode">
+        <option value="1500">Brief (1.5s)</option>
+        <option value="3000">Standard (3s)</option>
+        <option value="sticky">Until dismissed</option>
+      </select>
+      <div style="margin-top:12px" class="row">
+        <a class="btn" href="./">← Back</a>
+        <button class="btn" id="saveBtn">Save</button>
+      </div>
+    </div>
+    <div class="card">
+      <label><input type="checkbox" id="showPreview"> Show last capture preview under the live view</label>
+    </div>
+  </div>
+  <script>
+    const LS = localStorage;
+    function load() { 
+      document.getElementById('camFacing').value = LS.getItem('qc_facing')||'environment';
+      document.getElementById('toastMode').value = LS.getItem('qc_toast')||'1500';
+      document.getElementById('showPreview').checked = (LS.getItem('qc_preview')||'1')==='1';
+    }
+    function save(){
+      LS.setItem('qc_facing', document.getElementById('camFacing').value);
+      LS.setItem('qc_toast', document.getElementById('toastMode').value);
+      LS.setItem('qc_preview', document.getElementById('showPreview').checked ? '1':'0');
+      alert('Saved.');
+    }
+    document.getElementById('saveBtn').addEventListener('click', save);
+    load();
+  </script>
+</body>
+</html>

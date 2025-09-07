@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QuantCam</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="styles.css" />
+  <meta name="theme-color" content="#0b1220" />
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">QuantCam</div>
+    <div class="video-wrap"><video id="v" autoplay playsinline muted></video></div>
+    <div class="status" id="status">Ready.</div>
+    <div class="controls">
+      <button class="btn small" id="flip" title="Flip"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v10h-3l4 4 4-4h-3V6a2 2 0 0 0-2-2H7V1L3 5l4 4V7zm10 10H7V7h3L6 3 2 7h3v11a2 2 0 0 0 2 2h10v3l4-4-4-4v3z"/></svg></button>
+      <button class="btn iconbtn" id="shutter" title="Take photo">●</button>
+      <div class="row">
+        <button class="btn small" id="upload" title="Upload"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l4 4h-3v5h-2V7H8l4-4zm-7 9v8h14v-8h2v10H3V12h2z"/></svg></button>
+        <a class="btn small" href="settings.html" title="Settings"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 104 4 4 4 0 00-4-4zm9.4 4a7.43 7.43 0 00-.15-1.5l2.11-1.65-2-3.46-2.49 1a7.67 7.67 0 00-2.6-1.5l-.39-2.65H8.72l-.39 2.65a7.67 7.67 0 00-2.61 1.5l-2.49-1-2 3.46 2.11 1.65A7.43 7.43 0 003 12a7.43 7.43 0 00.15 1.5L1 15.15l2 3.46 2.49-1a7.67 7.67 0 002.61 1.5l.39 2.65h6.28l.39-2.65a7.67 7.67 0 002.6-1.5l2.49 1 2-3.46-2.11-1.65A7.43 7.43 0 0021.4 12z"/></svg></a>
+      </div>
+    </div>
+  </div>
+  <canvas id="c" class="hidden"></canvas>
+  <div class="toast" id="toast"><span id="toastIcon">✔</span><span id="toastMsg">Captured</span></div>
+  <script src="app.js"></script>
+</body>
+</html>
