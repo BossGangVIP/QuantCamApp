@@ -4,31 +4,66 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>QuantCam</title>
+
+  <!-- PWA / Icons -->
   <link rel="manifest" href="./manifest.json" />
   <meta name="theme-color" content="#0b1220" />
-  <link rel="icon" href="./favicon.ico" type="image/x-icon" />
-  <link rel="apple-touch-icon" href="icons/quantcam-192.png" />
-  <link rel="apple-touch-icon" sizes="512x512" href="icons/quantcam-512.png" />
+  <link rel="icon" href="./favicon.ico" />
+  <!-- helps Android show the correct install preview icon -->
+  <link rel="apple-touch-icon" href="icons/Sleek Wordmark Logo - QuantCam (192).png" />
+
   <link rel="stylesheet" href="./styles.css" />
+
+  <!-- tiny override to move the ingest badge to the TOP -->
+  <style>
+    .badge {
+      position: fixed;
+      top: 10px;
+      left: 0;
+      right: 0;
+      margin: 0 auto;
+      width: fit-content;
+      z-index: 9999;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: #18c37d;
+      color: #071a12;
+      font-weight: 600;
+      box-shadow: 0 2px 10px rgba(0,0,0,.35);
+    }
+    .badge.hidden { display: none; }
+  </style>
 </head>
-<body class="app">
-  <header class="appbar">
-    <div class="app-title">QuantCam</div>
-    <a class="icon-btn" href="./settings.html" aria-label="Settings" title="Settings">⚙</a>
+<body class="appbar">
+  <header class="app-title">
+    <div class="app-title__txt">QuantCam</div>
+    <a class="icon-btn" href="./settings.html" aria-label="Settings" title="Settings">⚙️</a>
   </header>
+
   <main class="content">
-    <video id="view" autoplay playsinline muted></video>
+    <video id="v" autoplay playsinline muted></video>
     <canvas id="canvas" class="hidden"></canvas>
     <div id="status" class="status">Ready.</div>
   </main>
+
   <footer class="toolbar">
-    <button id="flip" class="icon-btn" title="Flip camera" aria-label="Flip camera">🔄</button>
-    <button id="shutter" class="shutter" title="Take photo" aria-label="Take photo">📸</button>
+    <button id="flip" class="icon-btn" title="Flip camera" aria-label="Flip camera">🔁</button>
+    <button id="shutter" class="shutter" title="Take photo" aria-label="Take photo"></button>
     <label class="icon-btn upload" title="Upload from gallery" aria-label="Upload from gallery">
-      📂 <input type="file" id="picker" accept="image/*" class="hidden">
+      📁<input type="file" id="picker" accept="image/*" class="hidden" />
     </label>
   </footer>
+
   <div id="badge" class="badge hidden">Ingested ✓</div>
+
   <script src="./app.js"></script>
+  <script>
+    // keep service worker registration
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(console.warn);
+      });
+    }
+  </script>
 </body>
 </html>
