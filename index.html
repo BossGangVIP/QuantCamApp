@@ -2,47 +2,60 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>QuantCam</title>
 
-  <!-- PWA bits (unchanged) -->
-  <link rel="manifest" href="./manifest.json">
-  <meta name="theme-color" content="#0b1229" />
-  <link rel="icon" href="./favicon.ico">
-
-  <!-- Icons for install come from /icons/quantcam-192.png and /icons/quantcam-512.png (manifest.json) -->
-
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" href="./favicon.ico" />
   <link rel="stylesheet" href="./styles.css" />
 </head>
-<body class="app">
-  <header class="appbar">
-    <div class="app-title">QuantCam</div>
-    <a class="icon-btn" href="./settings.html" aria-label="Settings" title="Settings">⚙️</a>
+<body>
+  <header>
+    <h1>QuantCam</h1>
+    <a href="./settings.html" aria-label="Settings" title="Settings">
+      <!-- gear emoji placeholder exactly as before -->
+      <span style="font-size:28px">⚙️</span>
+    </a>
   </header>
 
-  <main class="content">
-    <video id="view" autoplay playsinline muted></video>
-    <canvas id="canvas" class="hidden"></canvas>
-    <div id="status" class="status">Camera ready</div>
+  <!-- success badge (app.js toggles this) -->
+  <div id="ingest-badge">Ingested ✔</div>
+
+  <main style="width:100%;display:flex;flex-direction:column;align-items:center">
+    <!-- video the camera streams into -->
+    <video id="camera" autoplay playsinline muted></video>
+
+    <!-- small status line -->
+    <div id="status" style="width:90%;max-width:500px;margin-top:10px;">Camera ready</div>
+
+    <!-- controls row -->
+    <div class="controls" aria-label="Controls">
+      <!-- flip camera (white) -->
+      <button id="flip-btn" aria-label="Flip camera" title="Flip camera">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 6V3L8 7l4 4V8c2.76 0 5 2.24 5 5 0 .7-.15 1.36-.42 1.96l1.48 1.48A6.98 6.98 0 0 0 19 13c0-3.87-3.13-7-7-7zm-5.04.96A6.98 6.98 0 0 0 5 13c0 3.87 3.13 7 7 7v3l4-4-4-4v3c-2.76 0-5-2.24-5-5 0-.7.15-1.36.42-1.96L6.96 6.96z"/>
+        </svg>
+      </button>
+
+      <!-- capture (camera icon) -->
+      <button id="capture-btn" aria-label="Take photo" title="Take photo">
+        <svg width="56" height="56" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 5h-3.2l-1.6-2H8.8L7.2 5H4c-1.1 0-2 .9-2 2v11a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7c0-1.1-.9-2-2-2Zm0 13H4V7h4.05l1.6-2h4.7l1.6 2H20v11ZM12 9a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm0 2.2A2.8 2.8 0 1 1 12 16.8 2.8 2.8 0 0 1 12 11.2Z"/>
+        </svg>
+      </button>
+
+      <!-- gallery (yellow folder) -->
+      <button id="gallery-btn" aria-label="Open gallery" title="Open gallery">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="#f4b000" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6c0-1.1.9-2 2-2h6z"/>
+        </svg>
+      </button>
+    </div>
   </main>
 
-  <footer class="toolbar">
-    <button id="flip" class="icon-btn" title="Flip camera" aria-label="Flip camera">🔁</button>
-    <button id="shutter" class="shutter" title="Take photo" aria-label="Take photo"></button>
-    <label class="icon-btn" title="Upload from gallery" aria-label="Upload from gallery">📁
-      <input type="file" id="picker" accept="image/*" class="hidden">
-    </label>
-  </footer>
+  <!-- hidden input for gallery (kept to match older flows) -->
+  <input type="file" id="picker" accept="image/*" class="hidden" style="display:none" />
 
-  <!-- small top badge -->
-  <div id="badge" class="badge hidden" role="status" aria-live="polite">Ingested ✓</div>
-
-  <script>
-    // keep existing SW behavior if you were using it
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(console.warn));
-    }
-  </script>
   <script src="./app.js"></script>
 </body>
 </html>
