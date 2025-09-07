@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QuantCam • Settings</title>
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#0b1220">
+  <link rel="icon" href="./favicon.ico">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="appbar">
+    <a class="icon-btn" href="./" aria-label="Back" title="Back">⬅️</a>
+    <div class="app-title">Settings</div>
+  </header>
+  <main class="content settings">
+    <section class="row">
+      <span>Theme</span>
+      <select id="themeSelect">
+        <option value="auto">Auto</option>
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+      </select>
+    </section>
+    <section class="row">
+      <span>Success badge</span>
+      <select id="badgeDuration">
+        <option value="1500">1.5s</option>
+        <option value="3000">3s</option>
+        <option value="0">Until closed</option>
+      </select>
+    </section>
+    <section class="row">
+      <label><input type="checkbox" id="showPreview" checked> Show last preview</label>
+    </section>
+  </main>
+  <script>
+    const LS = localStorage;
+    themeSelect.value = LS.getItem('theme') || 'auto';
+    badgeDuration.value = LS.getItem('badgeDuration') || '1500';
+    showPreview.checked = (LS.getItem('showPreview') || '1') === '1';
+    themeSelect.addEventListener('change', e => { LS.setItem('theme', e.target.value); });
+    badgeDuration.addEventListener('change', e => { LS.setItem('badgeDuration', e.target.value); });
+    showPreview.addEventListener('change', e => { LS.setItem('showPreview', e.target.checked ? '1':'0'); });
+  </script>
+</body>
+</html>

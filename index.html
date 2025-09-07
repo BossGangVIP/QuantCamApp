@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QuantCam</title>
+  <link rel="manifest" href="./manifest.json" />
+  <meta name="theme-color" content="#0b1220">
+  <link rel="icon" href="./favicon.ico">
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="appbar">
+    <div class="app-title">QuantCam</div>
+    <a class="icon-btn" href="./settings.html" aria-label="Settings" title="Settings">⚙️</a>
+  </header>
+
+  <main class="content">
+    <video id="view" autoplay playsinline muted></video>
+    <canvas id="canvas" class="hidden"></canvas>
+    <div id="status" class="status">Ready.</div>
+  </main>
+
+  <footer class="toolbar">
+    <button id="flip" class="icon-btn" title="Flip camera" aria-label="Flip camera">🔄</button>
+    <button id="shutter" class="shutter" title="Take photo" aria-label="Take photo">●</button>
+    <label class="icon-btn upload" title="Upload from gallery" aria-label="Upload from gallery">
+      📂<input type="file" id="picker" accept="image/*" class="hidden">
+    </label>
+  </footer>
+
+  <div id="badge" class="badge hidden">Ingested ✓</div>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(console.warn));
+    }
+  </script>
+  <script src="./app.js"></script>
+</body>
+</html>
