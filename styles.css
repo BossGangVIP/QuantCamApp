@@ -1,26 +1,98 @@
-/* core layout */
-:root { --bg:#0b1229; --panel:#121a36; --text:#e6ecff; --muted:#9fb0ff33; --accent:#3ea6ff; }
-*{box-sizing:border-box} html,body{height:100%} body.app{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-.hidden{display:none}
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-color: #0f172a;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 100vh;
+}
 
-.appbar{display:flex;align-items:center;justify-content:space-between;padding:16px 20px}
-.app-title{font-weight:700;font-size:28px;letter-spacing:.3px}
+header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  box-sizing: border-box;
+}
 
-.content{padding:0 16px 12px}
-#view{width:100%;max-height:48vh;border-radius:14px;background:#000;display:block;border:2px solid var(--muted)}
-#canvas{width:0;height:0} /* offscreen */
-.status{margin-top:10px;opacity:.9}
+h1 {
+  font-size: 24px;
+  margin: 0;
+}
 
-.toolbar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:28px;justify-content:center;align-items:center;padding:14px 0;background:linear-gradient(180deg,transparent,rgba(0,0,0,.25))}
-.icon-btn{font-size:24px;line-height:1;border:none;background:transparent;color:var(--text);padding:10px 12px;border-radius:12px}
-.icon-btn:active{transform:scale(.96)}
+#camera {
+  margin-top: 10px;
+  width: 90%;
+  max-width: 500px;
+  border-radius: 12px;
+  background: black;
+}
 
-.shutter{width:84px;height:84px;border-radius:50%;border:6px solid #58b7ff;background:#1c7ed6;box-shadow:0 6px 24px rgba(0,0,0,.35)}
-.shutter:active{transform:scale(.96)}
+.controls {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  margin-top: 16px;
+  width: 80%;
+}
 
-/* top badge (small pill) */
-.badge{position:fixed;top:14px;left:50%;transform:translateX(-50%);background:#19a72a;color:#fff;
-  padding:10px 14px;border-radius:12px;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.25);z-index:1000}
+button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 28px;
+}
 
-/* settings gear size */
-a.icon-btn{font-size:26px}
+button:active {
+  transform: scale(0.9);
+}
+
+#capture-btn {
+  font-size: 56px;
+  color: white;
+}
+
+#flip-btn {
+  font-size: 32px;
+  color: white;
+}
+
+#gallery-btn {
+  font-size: 32px;
+}
+
+#ingest-badge {
+  position: absolute;
+  top: 12px;
+  right: 70px; /* sits neatly left of the settings gear */
+  background: #28a745;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  display: none;
+}
+
+/* photo preview overlay */
+#photo-preview {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+#photo-preview img {
+  max-width: 90%;
+  max-height: 90%;
+  border-radius: 8px;
+}
