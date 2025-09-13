@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>QuantCam • Settings</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .panel{padding:18px}
+    .row{margin:12px 0}
+    select,button{font-size:16px;padding:10px 12px;border-radius:10px;border:0}
+    .save{background:#2f86ff;color:#fff}
+    .back{margin-right:12px;background:#1b2a41;color:#cfe3ff}
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a href="index.html" class="back" style="text-decoration:none;padding:8px 12px;border-radius:10px;background:#1b2a41;color:#cfe3ff">← Back</a>
+    <h1 class="brand">Settings</h1>
+  </header>
+  <main class="panel">
+    <div class="row">
+      <label for="badgeDur">Ingest badge duration</label><br>
+      <select id="badgeDur">
+        <option value="1000">1.0s</option>
+        <option value="1500" selected>1.5s</option>
+        <option value="15000">15s</option>
+        <option value="30000">30s</option>
+        <option value="sticky">Until dismissed</option>
+      </select>
+    </div>
+    <div class="row">
+      <label for="previewToggle">Photo preview</label><br>
+      <select id="previewToggle">
+        <option value="on" selected>On</option>
+        <option value="off">Off</option>
+      </select>
+    </div>
+    <div class="row">
+      <button id="saveBtn" class="save">Save</button>
+    </div>
+  </main>
+  <script>
+    const BADGE_KEY = "badgeDuration";
+    const PREVIEW_KEY = "previewEnabled";
+    const badgeDur = document.getElementById('badgeDur');
+    const previewToggle = document.getElementById('previewToggle');
+    const saveBtn = document.getElementById('saveBtn');
+
+    function init(){
+      const curDur = localStorage.getItem(BADGE_KEY) || "1500";
+      const curPrev = localStorage.getItem(PREVIEW_KEY) || "on";
+      badgeDur.value = curDur;
+      previewToggle.value = curPrev;
+    }
+    saveBtn.addEventListener('click', ()=>{
+      localStorage.setItem(BADGE_KEY, badgeDur.value);
+      localStorage.setItem(PREVIEW_KEY, previewToggle.value);
+      location.href = "index.html";
+    });
+    init();
+  </script>
+</body>
+</html>
