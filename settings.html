@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Settings • QuantCam</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="btn back" href="index.html">← Back</a>
+    <h1>Settings</h1>
+    <span class="spacer"></span>
+  </header>
+
+  <main class="content narrow">
+    <section class="card">
+      <label class="block mt">
+        <span>Ingest badge duration</span>
+        <select id="badge-ms">
+          <option value="1500">1.5s</option>
+          <option value="15000">15s</option>
+          <option value="30000">30s</option>
+          <option value="-1">Until dismissed</option>
+        </select>
+      </label>
+
+      <label class="block mt">
+        <span>Photo preview</span>
+        <select id="preview-on">
+          <option value="true">On</option>
+          <option value="false">Off</option>
+        </select>
+      </label>
+
+      <button id="save-btn" class="btn primary wide mt">Save</button>
+    </section>
+  </main>
+
+  <script>
+    const msSel = document.getElementById('badge-ms');
+    const prevSel = document.getElementById('preview-on');
+    const saved = JSON.parse(localStorage.getItem('qc_settings')||'{}');
+    if(saved.badgeMs!=null) msSel.value = String(saved.badgeMs);
+    if(saved.previewOn!=null) prevSel.value = String(saved.previewOn);
+    document.getElementById('save-btn').onclick = () => {
+      localStorage.setItem('qc_settings', JSON.stringify({
+        badgeMs: Number(msSel.value),
+        previewOn: prevSel.value === 'true'
+      }));
+      location.href = 'index.html';
+    };
+  </script>
+</body>
+</html>

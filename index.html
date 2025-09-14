@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>QuantCam</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="favicon.ico" />
+  <link rel="stylesheet" href="styles.css" />
+  <meta name="theme-color" content="#0f172a" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>QuantCam</h1>
+    <a class="gear" href="settings.html" aria-label="Settings">⚙️</a>
+  </header>
+
+  <div id="badge" class="badge">Ingested ✓</div>
+
+  <main class="content">
+    <div id="camera-container">
+      <video id="camera" autoplay playsinline></video>
+      <div id="preview" class="preview" hidden>
+        <img id="preview-img" alt="Last photo preview" />
+        <button id="preview-close" class="preview-close" aria-label="Close">✕</button>
+      </div>
+    </div>
+
+    <div id="status" class="status">Camera ready</div>
+
+    <div class="toolbar">
+      <button id="flip-btn" class="btn"><img src="icons/flip.png" alt="Flip"></button>
+      <button id="capture-btn" class="btn primary"><img src="icons/capture.png" alt="Capture"></button>
+      <button id="gallery-btn" class="btn"><img src="icons/folder.png" alt="Gallery"></button>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

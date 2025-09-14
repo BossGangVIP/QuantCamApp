@@ -1,0 +1,41 @@
+:root{
+  --bg:#0f172a; --panel:#111b31; --muted:#94a3b8;
+  --text:#e2e8f0; --accent:#2f6fff; --soft:#1f2a44;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial}
+.topbar{display:flex;align-items:center;gap:14px;padding:16px 20px}
+.topbar h1{margin:0;font-size:36px;font-weight:800;letter-spacing:.5px}
+.topbar .gear{margin-left:auto;font-size:28px;text-decoration:none}
+.content{padding:0 20px 24px}
+.content.narrow{max-width:720px;margin:0 auto}
+.status{margin:14px 4px 18px;color:var(--muted);font-size:22px}
+#camera-container{
+  width:100%;
+  height:calc(100vh - 250px);
+  background:#0b1223;border-radius:24px;overflow:hidden;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.05);
+}
+#camera{width:100%;height:100%;object-fit:cover;background:black}
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:22px;padding:0 22px 28px}
+.btn{width:90px;height:90px;border-radius:22px;border:1px solid rgba(255,255,255,.06);background:var(--soft);
+  display:flex;align-items:center;justify-content:center;box-shadow:0 10px 28px rgba(0,0,0,.35);}
+.btn img{width:38px;height:38px;opacity:.95}
+.btn.primary{background:var(--accent)}
+.btn.wide{width:140px}
+.badge{position:absolute; top:78px; right:86px;background:#22c55e;color:#fff;border-radius:12px;
+  padding:10px 14px;font-weight:700;box-shadow:0 10px 24px rgba(0,0,0,.3);display:none;}
+.preview{position:absolute; right:22px; bottom:14px; width:40vw; max-width:280px; aspect-ratio:1; border-radius:18px; overflow:hidden;
+  border:1px solid rgba(255,255,255,.2); box-shadow:0 12px 30px rgba(0,0,0,.45);}
+.preview img{width:100%;height:100%;object-fit:cover}
+.preview-close{position:absolute; top:8px; right:8px; background:rgba(255,255,255,.9); border:0; border-radius:8px; padding:4px 8px}
+.card{background:var(--panel);padding:22px;border-radius:18px;box-shadow:0 10px 28px rgba(0,0,0,.35)}
+.block span{display:block;margin-bottom:8px;color:var(--muted)}
+select{width:220px;height:44px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:#0b1223;color:var(--text);padding:0 12px}
+.back{background:#0b1223;color:var(--text);text-decoration:none;padding:10px 18px;border-radius:12px;border:1px solid rgba(255,255,255,.1)}
+.mt{margin-top:16px}
+@media (max-height: 700px){
+  #camera-container{height:calc(100vh - 280px)}
+  .btn{width:84px;height:84px;border-radius:20px}
+}
